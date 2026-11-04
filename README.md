@@ -70,7 +70,7 @@ docker compose up --build
 
 ## Tài liệu thiết kế
 
-- `Thiet_ke_he_thong_phat_hien_gian_lan_da_tai_khoan_v4_auto100.md` — bản chốt
+- `Thiet_ke_he_thong_phat_hien_gian_lan_da_tai_khoan_v4_auto100.md` — bản chốt v4.1 (đã sửa theo rà soát)
 - `S3_Case_Investigation_Service.md` — đặc tả S3
 - `M0_CHECKLIST.md` — checklist môi trường
 

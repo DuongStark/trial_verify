@@ -2,7 +2,7 @@
 ## Phiên bản v4 — Auto 100% + Case Investigation
 
 **Tên tiếng Anh:** Multi-Account Fraud Detection System with Browser Fingerprinting, Graph Analysis and Auto-Triage  
-**Phiên bản:** 4.0  
+**Phiên bản:** 4.1 — đã sửa theo rà soát  
 **Ngày:** 04/11/2026  
 **Môn học:** Phát triển phần mềm hướng dịch vụ (SOA)  
 **Quy mô:** Nhóm 2 sinh viên, 8 tuần, MVP đồ án  
@@ -23,6 +23,8 @@ Một công ty cung cấp ứng dụng AI có gói Premium dùng thử 7 ngày. 
 
 **Không có admin duyệt trong luồng chính.** Đây là auto 100%.
 
+> **Lưu ý cách hiểu:** “Auto 100%” nghĩa là **tự động hóa luồng quyết định**, không phải hệ thống phát hiện gian lận chính xác 100%. Dữ liệu giả lập chỉ chứng minh hành vi theo các kịch bản đã thiết kế.
+
 ### 0.2. Ba service
 
 | Service | Câu hỏi nghiệp vụ | Dữ liệu |
@@ -37,7 +39,7 @@ Một công ty cung cấp ứng dụng AI có gói Premium dùng thử 7 ngày. 
 2. **Auto 100%**: LOW → ACTIVE; MEDIUM → OTP → tự quyết; HIGH → REJECT mềm.
 3. **Không manual review** trong critical path.
 4. **S3 là Case & Investigation Service**, không phải hàng đợi duyệt tay.
-5. **S2 dùng 4 nhóm bằng chứng D/N/I/V**, có rarity + time decay + fingerprint confidence.
+5. **S2 dùng 4 nhóm bằng chứng D/N/I/V**, có rarity + time decay + `device_stability` do server tự tính.
 6. **Không ML, không GDS, không WCC/Louvain** trong MVP.
 7. **Không shared database**; mỗi service sở hữu store riêng.
 8. **REST cho việc cần trả lời ngay**; **RabbitMQ cho việc không cần chờ**.
@@ -55,6 +57,24 @@ Một công ty cung cấp ứng dụng AI có gói Premium dùng thử 7 ngày. 
 - WCC/Louvain/GDS.
 - Redis/Kafka.
 - JWT tại Gateway (điểm cộng nhỏ, không đáng thời gian).
+
+### 0.5. Các điểm đã sửa sau rà soát v4.1
+
+| Điểm rà soát | Cách sửa trong v4.1 |
+|---|---|
+| Công thức điểm/decision mâu thuẫn | Chốt một `decision function` duy nhất ở mục 4.5 và 7.9 |
+| Ví dụ JSON sai điểm | Sửa score 62.5 → 63; decision REJECT vì D,V >= 60 |
+| OTP/S2 timeout sau verify chưa rõ | Thêm `verification_state`, `risk_check_context=POST_VERIFY`; không gửi OTP lại |
+| OTP sai hết lượt mơ hồ | Chốt `REJECTED`; hết hạn xác minh → `CANCELLED` |
+| S3 event sai thứ tự | Thêm `claim_event_state` + rule version cho S3 |
+| Ghép cụm theo campaign quá rộng | Campaign chỉ là phạm vi; link cần user/graph evidence |
+| Thiếu `next_enrich_at` | Bổ sung schema + worker |
+| Severity còn dùng F1/F2/F5 | Chuyển sang `risk_level` + related cases + `strong_group_count` |
+| Append-only dễ hiểu nhầm | Case row được update; chỉ `case_events`/audit là bất biến |
+| Dataset 400 bị cộng lệch | 240 + 80 + 80, 40 evasive là tập con |
+| Feature normalization chưa rõ | Thêm bảng công thức, cửa sổ thời gian, cách đếm |
+| Client fingerprint confidence bị tin | Bỏ khỏi decision; dùng `device_stability` server-side |
+| OpenAPI/test dồn cuối | Làm cùng service; kế hoạch 8 tuần đã sửa |
 
 ---
 
@@ -178,7 +198,7 @@ Thiết kế dùng **3 service**, vượt mức tối thiểu cho nhóm 2 ngư�
 | HMAC | Hash có khóa bí mật, dùng để không lưu dữ liệu thô |
 | Rarity | Độ hiếm của tín hiệu; tín hiệu hiếm có giá trị hơn |
 | Time decay | Tín hiệu gần đây quan trọng hơn tín hiệu cũ |
-| Confidence | Mức tin cậy của fingerprint |
+| Device stability | Độ ổn định của fingerprint do S2 tự tính từ lịch sử quan sát; không dùng confidence do client gửi |
 | Outbox | Bảng ghi event cùng transaction nghiệp vụ để không mất event |
 | Inbox | Bảng ghi event đã xử lý để không xử lý trùng |
 | Idempotent | Gọi lặp vẫn chỉ có một kết quả |
@@ -264,21 +284,36 @@ Case không có quyết định duyệt/từ chối. Nó là hồ sơ.
 | `DONE` | Đã enrich |
 | `FAILED` | Retry quá số lần |
 
-### 4.5. Auto decision table
+### 4.5. Auto decision function — nguồn chân lý duy nhất
 
-| Score | Level | Action | Claim status | Case |
-|---:|---|---|---|---|
-| 0–29 | LOW | `AUTO_ALLOW` | `ACTIVE` | Không tạo case |
-| 30–64 | MEDIUM | `AUTO_VERIFY` | `VERIFY_REQUIRED` | Tạo case sau kết quả cuối |
-| 65–100 | HIGH | `AUTO_REJECT` | `REJECTED` | Tạo case |
+Không dùng một bảng score đơn lẻ để quyết định. Dùng đúng một hàm:
+
+```text
+R = 0.40*D + 0.15*N + 0.20*I + 0.25*V
+
+strongGroups = count(D >= 60, I >= 60, V >= 60)
+
+1. REJECT nếu R >= 40 và strongGroups >= 2
+2. VERIFY nếu R >= 30 hoặc max(D, I, V) >= 60
+3. ALLOW nếu còn lại
+```
+
+`level` suy ra từ decision, không suy từ score:
+
+| Decision | Level | Claim status | Case |
+|---|---|---|---|
+| `ALLOW` | LOW | `ACTIVE` | Không tạo case |
+| `VERIFY` | MEDIUM | `VERIFY_REQUIRED` | Tạo case sau kết quả cuối |
+| `REJECT` | HIGH | `REJECTED` | Tạo case |
 
 Quy tắc bổ sung:
 
-- `REJECT` chỉ khi score >=65 **và** có ≥2 nhóm bằng chứng mạnh.
-- Nếu chỉ network mạnh → tối đa `VERIFY`.
-- Nếu fingerprint confidence thấp → không đủ `REJECT` một mình.
+- `REJECT` cần **≥2 nhóm D/I/V >= 60** và `R >= 40`.
+- Chỉ network mạnh → tối đa `VERIFY`.
+- `device_stability` thấp → cap D = 30, không đủ `REJECT` một mình.
 - Sau OTP, nếu S2 trả `VERIFY` → `ACTIVE` + `monitored=true` (không hỏi OTP lần hai).
 - Sau OTP, nếu S2 trả `REJECT` → `REJECTED`.
+- `score` chỉ là số hiển thị; **decision function** mới là quyết định cuối.
 
 ### 4.6. Business rules
 
@@ -292,9 +327,9 @@ Quy tắc bổ sung:
 | BR-S1-04 | Key khác cho user/campaign đã claim → 409. |
 | BR-S1-05 | Không cấp trial khi chưa có risk assessment. |
 | BR-S1-06 | S2 lỗi → giữ `PENDING_RISK_CHECK`, trả 202, retry. |
-| BR-S1-07 | LOW → ACTIVE; MEDIUM → VERIFY; HIGH → REJECT. |
-| BR-S1-08 | OTP đúng → tăng `evaluationVersion`, gọi lại S2 một lần. |
-| BR-S1-09 | OTP sai quá N lần → `CANCELLED`/`REJECTED`. |
+| BR-S1-07 | Decision ALLOW → ACTIVE; VERIFY → VERIFY_REQUIRED; REJECT → REJECTED. |
+| BR-S1-08 | OTP đúng → tăng `evaluationVersion`, gọi lại S2 một lần; đánh dấu `verification_state=VERIFIED`. |
+| BR-S1-09 | OTP sai quá N lần → `REJECTED`; hết hạn xác minh → `CANCELLED`. |
 | BR-S1-10 | ACTIVE quá hạn → EXPIRED + event. |
 | BR-S1-11 | Mọi thay đổi quan trọng ghi outbox trong cùng transaction. |
 | BR-S1-12 | Không tự cấp trial khi S2 down. |
@@ -308,7 +343,7 @@ Quy tắc bổ sung:
 | BR-S2-03 | Assessment idempotent theo `claimId:evaluationVersion`. |
 | BR-S2-04 | Tín hiệu phổ biến phải giảm điểm theo rarity. |
 | BR-S2-05 | Tín hiệu cũ giảm điểm theo time decay. |
-| BR-S2-06 | Fingerprint confidence thấp phải bị cap. |
+| BR-S2-06 | `device_stability` thấp phải bị cap D = 30; không dùng confidence do client gửi để quyết định. |
 | BR-S2-07 | Không REJECT nếu chỉ có network signal. |
 | BR-S2-08 | REJECT cần ≥2 nhóm D/I/V mạnh. |
 | BR-S2-09 | Graph query có depth/node/edge limit. |
@@ -322,7 +357,7 @@ Quy tắc bổ sung:
 |---|---|
 | BR-S3-01 | Mỗi claim tối đa một case; `claim_id` unique. |
 | BR-S3-02 | Chỉ tạo case từ quyết định cuối. |
-| BR-S3-03 | Case/audit append-only. |
+| BR-S3-03 | `case_events` và audit append-only; bảng `fraud_cases` được cập nhật trạng thái/severity/enrichment. |
 | BR-S3-04 | S2 lỗi không làm mất case; enrichment `PENDING`. |
 | BR-S3-05 | Case liên quan trong 30 ngày thì ghép cụm. |
 | BR-S3-06 | Severity P1/P2/P3 chỉ để ưu tiên điều tra. |
@@ -371,7 +406,7 @@ flowchart TB
 
 - **S1** giữ giao dịch trial, unique claim, idempotency, auto policy. Cần ACID.
 - **S2** giữ graph/risk. Cần truy vấn quan hệ, Neo4j phù hợp.
-- **S3** giữ case/audit/retention/dashboard. Cần dữ liệu quan hệ, append-only, vòng đời dài.
+- **S3** giữ case/audit/retention/dashboard. Cần dữ liệu quan hệ, lịch sử event/audit bất biến, vòng đời dài.
 - Ba service có **dữ liệu, vòng đời, kiểu truy vấn, cách lỗi** khác nhau.
 
 Nếu gộp S3 vào S1:
@@ -443,6 +478,13 @@ CREATE TABLE trial_claims (
   decision TEXT,
   reasons_json JSONB NOT NULL DEFAULT '[]',
   monitored BOOLEAN NOT NULL DEFAULT false,
+  verification_state TEXT NOT NULL DEFAULT 'NOT_REQUIRED'
+    CHECK (verification_state IN ('NOT_REQUIRED','PENDING','VERIFIED','FAILED','EXPIRED')),
+  verification_attempts INT NOT NULL DEFAULT 0,
+  verification_expires_at TIMESTAMPTZ,
+  verified_at TIMESTAMPTZ,
+  risk_check_context TEXT NOT NULL DEFAULT 'INITIAL'
+    CHECK (risk_check_context IN ('INITIAL','POST_VERIFY')),
   requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   activated_at TIMESTAMPTZ,
   expires_at TIMESTAMPTZ,
@@ -527,15 +569,28 @@ S2 decision VERIFY -> VERIFY_REQUIRED
 S2 decision REJECT -> REJECTED (soft)
 ```
 
-Sau OTP:
+Sau OTP thành công:
 
 ```text
+verification_state = VERIFIED
+status = PENDING_RISK_CHECK
+evaluation_version += 1
+risk_check_context = POST_VERIFY
+
 S2 ALLOW  -> ACTIVE
 S2 VERIFY -> ACTIVE + monitored=true
 S2 REJECT -> REJECTED
 ```
 
-Không quay lại `VERIFY_REQUIRED`.
+Quy tắc bắt buộc:
+
+- Worker phải thấy `risk_check_context=POST_VERIFY` để **không gửi OTP lại**.
+- Nếu S2 timeout sau OTP: giữ `PENDING_RISK_CHECK`, retry; không quay lại `VERIFY_REQUIRED`.
+- Kết quả assessment cũ chỉ được áp dụng nếu:
+  - `assessment.evaluationVersion == claim.evaluation_version`
+  - `claim.status == PENDING_RISK_CHECK`
+  - `claim.version == expectedVersion`
+- Kết quả đến muộn/khác version bị bỏ qua, ghi log `STALE_ASSESSMENT_IGNORED`.
 
 ### 6.7. OTP
 
@@ -545,6 +600,22 @@ Không quay lại `VERIFY_REQUIRED`.
 - Lưu hash, không lưu plaintext.
 - Demo: `OTP_FIXED_CODE=123456` hoặc `DEMO_AUTO_VERIFY=true`.
 - OTP không chứng minh danh tính; chỉ là friction.
+- Claim có thêm:
+  - `verification_state`: `NOT_REQUIRED | PENDING | VERIFIED | FAILED | EXPIRED`
+  - `verification_attempts`
+  - `verification_expires_at`
+- Hai request verify đồng thời:
+  - Dùng `SELECT ... FOR UPDATE` hoặc compare-and-set trên `status=VERIFY_REQUIRED` và `verification_state=PENDING`.
+  - Chỉ một request được tăng `evaluation_version`.
+  - Request còn lại trả 409 `VERIFICATION_ALREADY_IN_PROGRESS` hoặc trạng thái hiện tại.
+- OTP sai hết lượt:
+  - `verification_state=FAILED`
+  - claim `REJECTED`
+  - `trial.rejected` event với reason `VERIFICATION_FAILED`.
+- Hết hạn xác minh:
+  - `verification_state=EXPIRED`
+  - claim `CANCELLED`
+  - chỉ audit, không tạo case fraud.
 
 ### 6.8. Retry worker
 
@@ -552,7 +623,9 @@ Không quay lại `VERIFY_REQUIRED`.
 - Gọi S2 cùng `assessmentKey`.
 - Backoff: 5s, 15s, 60s, 5m, 15m.
 - Sau `max_attempts`: giữ PENDING, tăng backoff, ghi metric/alert. Không auto-allow.
+- Nếu `risk_check_context=POST_VERIFY`: không gửi OTP lại; khi S2 trả về, áp dụng policy post-verify.
 - Khi S2 phục hồi, worker tự resolve.
+- Worker cập nhật claim bằng `WHERE status = expected AND evaluation_version = expected AND version = expectedVersion`; nếu 0 hàng bị ảnh hưởng, bỏ qua kết quả cũ.
 
 ### 6.9. Expiry worker
 
@@ -577,7 +650,9 @@ Không quay lại `VERIFY_REQUIRED`.
 | RabbitMQ down | Outbox retry |
 | DB down | 503 |
 | Duplicate claim | 409 hoặc trả claim cũ |
-| OTP sai quá N | CANCELLED/REJECTED |
+| OTP sai quá N | `REJECTED` + case `VERIFICATION_FAILED` |
+| OTP quá hạn | `CANCELLED`, chỉ audit |
+| Assessment cũ đến muộn | Bỏ qua theo version, ghi log |
 
 ---
 
@@ -613,7 +688,7 @@ Không quay lại `VERIFY_REQUIRED`.
 
 | Relationship | Thuộc tính |
 |---|---|
-| `OBSERVED_FP` | `confidence`, `firstSeenAt`, `lastSeenAt`, `count` |
+| `OBSERVED_FP` | `clientConfidence` (advisory), `deviceStability` (server-side), `observationDays`, `firstSeenAt`, `lastSeenAt`, `count` |
 | `OBSERVED_IP` | `firstSeenAt`, `lastSeenAt`, `count` |
 | `OBSERVED_SUBNET` | `firstSeenAt`, `lastSeenAt`, `count` |
 | `HAS_EMAIL_DOMAIN` | `firstSeenAt`, `lastSeenAt` |
@@ -683,7 +758,7 @@ Input từ S1:
   "campaignId": "PREMIUM_7_DAYS",
   "accountCreatedAt": "2026-11-04T09:58:00Z",
   "visitorId": "abc123",
-  "fingerprintConfidence": 0.82,
+  "clientFingerprintConfidence": 0.82,
   "trustedIp": "203.0.113.10",
   "emailDomainKey": "hmac-domain",
   "emailVerified": true,
@@ -700,7 +775,12 @@ Quy tắc:
 - HMAC fingerprint/IP/domain.
 - `subnetKey = HMAC(/24 của IP)`.
 - `support` = số user distinct liên kết; có thể đếm trực tiếp hoặc maintain counter.
-- `confidence` lưu trên relationship; nếu thiếu, dùng 0.5.
+- `clientFingerprintConfidence` chỉ lưu để debug, **không dùng để quyết định**.
+- `device_stability` do S2 tự tính từ lịch sử quan sát:
+  - `observationDays` = số ngày distinct đã thấy fingerprint.
+  - `device_stability = min(1, observationDays / 7)`.
+  - Nếu chưa từng thấy fingerprint → 0.
+- `OBSERVED_FP` lưu `clientConfidence` (advisory) và `deviceStability` (server-side).
 
 ### 7.4. Assessment idempotency
 
@@ -724,27 +804,59 @@ V = Velocity/Behavior score 0..100
 R = 0.40*D + 0.15*N + 0.20*I + 0.25*V
 ```
 
+#### Quy ước đếm và chuẩn hóa
+
+Trước khi tính D/N/I/V, chốt các quy ước sau:
+
+- Cửa sổ thời gian: `10 phút`, `1 giờ`, `24 giờ`, `7 ngày`, `30 ngày`.
+- `relatedAccounts` = số **userId distinct**, **không tính user hiện tại**.
+- Chỉ đếm claim/event cuối cùng; **không đếm retry** `PENDING_RISK_CHECK`.
+- Dedupe theo `claimId` và `eventId`.
+- `support(signal)` = số userId distinct đã dùng signal trong 30 ngày.
+- `observationDays` = số ngày distinct đã thấy fingerprint.
+- `device_stability = min(1, observationDays / 7)`; không dùng confidence do client gửi.
+- `decay = 0.5 ^ (age_days / 14)`.
+
+Công thức chuẩn hóa chốt:
+
+| Biến | Công thức |
+|---|---|
+| `fp_trial_link_norm` | `min(1, Σ rarity(fp) * decay(lastSeen) * device_stability)` cho related account có trial ACTIVE/EXPIRED cùng campaign trong 30 ngày |
+| `fp_multi_account_norm` | `min(1, max(0, distinctFpAccounts - 1) / 4)`; gồm cả user hiện tại |
+| `ip_rare_link_norm` | `min(1, Σ rarity(ip/subnet) * decay(lastSeen))` cho related account trong 30 ngày |
+| `ip_burst_norm` | `min(1, max(count10m/3, count1h/5, count24h/20))`; đếm **claim cuối**, không đếm retry |
+| `prior_reject` | `min(1, rejectedClaims90d / 3)`; rejected claim distinct trong 90 ngày |
+| `verify_failures` | `min(1, failedVerifications30d / 3)` |
+| `email_domain_cluster` | `min(1, max(0, support(domain) - 1) / 10)`; support trong 30 ngày |
+
+Quy ước:
+
+- `relatedAccounts` không tính user hiện tại.
+- `support` tính tất cả userId distinct, gồm user hiện tại.
+- Retry `PENDING_RISK_CHECK` không làm tăng velocity.
+- Một claim chỉ đóng góp một lần vào count.
+
 #### Nhóm D — Device/Graph
 
 **Câu hỏi:** Có tài khoản khác dùng chung fingerprint không?
 
 | Tín hiệu | Công thức / điểm |
 |---|---|
-| `fp_trial_link` | Tổng `rarity * decay * confidence` của tài khoản liên quan từng nhận trial cùng campaign |
-| `fp_multi_account` | `min(1, (distinctFpAccounts - 1) / 4)` |
-| `fp_confidence` | `confidence` nếu fingerprint tái sử dụng |
+| `fp_trial_link` | Tổng `rarity * decay * device_stability` của tài khoản liên quan từng nhận trial cùng campaign |
+| `fp_multi_account` | `min(1, (distinctFpAccounts - 1) / 4)`; `distinctFpAccounts` gồm cả user hiện tại |
+| `device_stability` | `min(1, observationDays / 7)` |
 
 ```text
 D = 100 * min(1,
   0.55 * fp_trial_link_norm +
   0.30 * fp_multi_account_norm +
-  0.15 * fp_confidence
+  0.15 * device_stability
 )
 ```
 
 Cap:
 
-- Nếu `fingerprintConfidence < 0.3` → `D = min(D, 30)`.
+- Nếu `device_stability < 0.3` → `D = min(D, 30)`.
 - Nếu `visitorId` null → `D = 0`.
 
 #### Nhóm N — Network
@@ -806,8 +918,8 @@ Quy tắc:
 | Account age < 1 giờ | 0.6 |
 | Account age < 24 giờ | 0.3 |
 | Burst signup/claim 10m/1h/24h | `max(count10m/3, count1h/5, count24h/20)` |
-| Prior rejected trial | `min(1, rejectedCount/3)` |
-| Verification failures | `min(1, failures/3)` |
+| Prior rejected trial | `min(1, rejectedClaims90d/3)` |
+| Verification failures | `min(1, failedVerifications30d/3)` |
 
 ```text
 V = 100 * min(1,
@@ -850,22 +962,24 @@ decay = 0.5 ^ (age_days / 14)
 | 30 ngày | 0.23 |
 | 90 ngày | 0.01 |
 
-### 7.8. Fingerprint confidence
+### 7.8. Device stability — không dùng confidence từ client
 
-- FingerprintJS OSS chính xác khoảng 40–60%, có thể spoof.
-- `confidence >= 0.8` → tin vừa phải.
-- `0.3–0.8` → giảm điểm.
-- `< 0.3` → cap D = 30.
-- Null → D = 0.
+- FingerprintJS OSS là tín hiệu xác suất, có thể bị spoof; không có độ chính xác bảo đảm trong mọi môi trường.
+- `clientFingerprintConfidence` do client gửi **không được dùng để quyết định**.
+- S2 tự tính `device_stability` từ lịch sử quan sát:
+  - Fingerprint mới thấy 1 ngày → stability thấp.
+  - Thấy >= 7 ngày → stability = 1.
+- `device_stability < 0.3` → cap D = 30.
+- `visitorId` null → D = 0.
 
-### 7.9. Decision policy
+### 7.9. Decision policy — một hàm duy nhất
 
 ```text
-strongGroups = count(D >= 50, I >= 50, V >= 50)
+strongGroups = count(D >= 60, I >= 60, V >= 60)
 
-if R >= 65 AND strongGroups >= 2:
+if R >= 40 AND strongGroups >= 2:
     decision = REJECT
-elif R >= 35 OR max(D, I, V) >= 65:
+elif R >= 30 OR max(D, I, V) >= 60:
     decision = VERIFY
 else:
     decision = ALLOW
@@ -873,12 +987,14 @@ else:
 
 Quy tắc an toàn:
 
-- Nếu chỉ N >= 50 và D/I/V < 50 → ALLOW hoặc VERIFY.
-- Nếu D cao nhưng confidence thấp → VERIFY.
+- Nếu chỉ N >= 60 và D/I/V < 60 → tối đa VERIFY.
+- Nếu D cao nhưng `device_stability` thấp → D bị cap 30, không REJECT một mình.
 - Nếu I cao nhưng V thấp → VERIFY, không REJECT.
-- Nếu D + V cao → REJECT.
-- Nếu I + V cao → REJECT.
-- Nếu D + I cao → REJECT.
+- Nếu D + V cùng >= 60 và R >= 40 → REJECT.
+- Nếu I + V cùng >= 60 và R >= 40 → REJECT.
+- Nếu D + I cùng >= 60 và R >= 40 → REJECT.
+- Nếu `R >= 40` nhưng chỉ có 1 nhóm mạnh → VERIFY.
+- `level` suy ra từ decision: ALLOW=LOW, VERIFY=MEDIUM, REJECT=HIGH.
 
 ### 7.10. Reason codes
 
@@ -886,7 +1002,7 @@ Quy tắc an toàn:
 |---|---|---|
 | D | `DEVICE_SHARED_FP_TRIAL` | Fingerprint trùng tài khoản từng nhận trial |
 | D | `DEVICE_MULTI_ACCOUNT` | Fingerprint liên kết nhiều tài khoản |
-| D | `DEVICE_LOW_CONFIDENCE` | Fingerprint confidence thấp |
+| D | `DEVICE_LOW_STABILITY` | Fingerprint mới, chưa đủ ổn định |
 | N | `NETWORK_RARE_LINK` | IP/subnet hiếm, có liên kết |
 | N | `NETWORK_BURST` | Burst signup/claim |
 | N | `NETWORK_PROXY_RISK` | Proxy/VPN/hosting |
@@ -908,7 +1024,7 @@ Quy tắc an toàn:
   "claimId": "claim_001",
   "evaluationVersion": 1,
   "userId": "user_001",
-  "score": 72,
+  "score": 63,
   "level": "HIGH",
   "decision": "REJECT",
   "groupScores": { "D": 85, "N": 30, "I": 20, "V": 80 },
@@ -916,10 +1032,13 @@ Quy tắc an toàn:
     { "code": "DEVICE_SHARED_FP_TRIAL", "group": "D" },
     { "code": "VELOCITY_BURST", "group": "V" }
   ],
-  "ruleVersion": "risk-v4",
+  "ruleVersion": "risk-v4.1",
   "evaluatedAt": "2026-11-04T10:00:00Z"
 }
 ```
+
+> `R = 0.40*85 + 0.15*30 + 0.20*20 + 0.25*80 = 62.5`, làm tròn hiển thị thành `63`.  
+> `strongGroups = 2` (D=85, V=80) và `R >= 40` → `REJECT`.
 
 ### 7.12. Cypher queries
 
@@ -932,7 +1051,8 @@ WHERE other.userId <> $userId
   AND r2.lastSeenAt >= $windowStart
 RETURN DISTINCT other.userId AS relatedUserId,
        f.support AS support,
-       r2.confidence AS confidence,
+       r2.deviceStability AS deviceStability,
+       r2.clientConfidence AS clientConfidence,
        r2.lastSeenAt AS lastSeenAt
 LIMIT 50;
 ```
@@ -1037,7 +1157,7 @@ Inbox: `ProcessedEvent` trong cùng Neo4j transaction.
 - Tạo case idempotent.
 - Enrich bằng graph S2.
 - Ghép cụm, tính severity P1/P2/P3.
-- Audit append-only.
+- Audit/event append-only; case row cập nhật trạng thái/severity/enrichment.
 - Retention auto-close.
 - Dashboard/graph view.
 
@@ -1066,12 +1186,17 @@ CREATE TABLE fraud_cases (
   decision TEXT NOT NULL,
   risk_score INT,
   risk_level TEXT,
+  group_scores_json JSONB NOT NULL DEFAULT '{}',
+  strong_group_count INT NOT NULL DEFAULT 0,
   reason_codes JSONB NOT NULL DEFAULT '[]',
   cluster_key TEXT,
   severity TEXT,
   severity_reasons JSONB NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'OPEN',
   enrichment_status TEXT NOT NULL DEFAULT 'PENDING',
+  enrichment_attempts INT NOT NULL DEFAULT 0,
+  next_enrich_at TIMESTAMPTZ,
+  last_enrich_error TEXT,
   graph_status TEXT,
   opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at TIMESTAMPTZ,
@@ -1113,6 +1238,15 @@ CREATE TABLE s3_inbox (
   processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Lưu trạng thái cuối theo claim, kể cả khi chưa có case.
+-- Dùng để xử lý event đến sai thứ tự.
+CREATE TABLE claim_event_state (
+  claim_id UUID PRIMARY KEY,
+  last_version INT NOT NULL,
+  last_status TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE security_audit_events (
   event_id UUID PRIMARY KEY,
   claim_id UUID,
@@ -1135,24 +1269,54 @@ CREATE TABLE security_audit_events (
 Consumer:
 
 1. Begin transaction.
-2. Check `s3_inbox`.
-3. Check `claim_id`.
-4. Insert case + `CASE_CREATED`.
+2. Check `s3_inbox` theo `eventId`; nếu đã có → commit/ack, bỏ qua.
+3. Cập nhật `claim_event_state` theo `aggregateVersion`:
+   - Nếu `version <= last_version` → event cũ, bỏ qua.
+   - Nếu `version > last_version` → cập nhật `last_version` và `last_status`.
+4. Nếu là event tạo case:
+   - Nếu `claim_id` đã có case → bỏ qua tạo mới.
+   - Nếu chưa: insert case + `CASE_CREATED`.
+   - Nếu `last_status` hiện tại là `EXPIRED` → tạo case rồi đóng ngay với lý do `TRIAL_EXPIRED`.
 5. Insert inbox.
 6. Commit.
 7. Ack.
+
+Quy tắc event sai thứ tự:
+
+- `trial.expired` đến trước `trial.activated`:
+  - Lưu `claim_event_state.last_status=EXPIRED`.
+  - Chưa có case nên không tạo.
+  - Khi `trial.activated` cũ hơn đến sau → bị bỏ qua theo version.
+  - Nếu `trial.activated` mới hơn đến sau → tạo case và đóng ngay nếu trạng thái cuối là EXPIRED.
+- `trial.rejected` và `trial.activated` cùng claim:
+  - Chỉ event có version cao hơn được cập nhật trạng thái cuối.
+  - Case chỉ tạo một lần theo `claim_id`.
 
 ### 8.5. Enrichment worker
 
 1. Tìm case `enrichment_status=PENDING` và `next_enrich_at <= now()`.
 2. Gọi S2 `/internal/graph/users/{userId}/neighbors`.
 3. Tìm case liên quan trong 30 ngày.
-4. Tạo `case_links`.
-5. Chọn `cluster_key` = case_id nhỏ nhất.
-6. Tính severity.
-7. Update case + append `CASE_ENRICHED`/`CASE_LINKED`.
-8. Nếu S2 lỗi: `graph_status=UNAVAILABLE`, giữ PENDING/PARTIAL, backoff.
-9. Sau max attempts: `FAILED`, case vẫn còn.
+   - `campaign_id` chỉ là **phạm vi so sánh**, không phải tiêu chí ghép cụm.
+   - Chỉ link khi:
+     - cùng `user_id`, hoặc
+     - cùng cluster từ S2, hoặc
+     - cùng fingerprint/IP/subnet **hiếm** với độ mạnh đủ ngưỡng.
+4. Tạo `case_links` với `link_type`:
+   - `SAME_USER`
+   - `SAME_CLUSTER`
+   - `SAME_FINGERPRINT_RARE`
+   - `SAME_IP_RARE`
+   - `SAME_SUBNET_BURST`
+5. Chọn `cluster_key` = `case_id` nhỏ nhất trong cụm.
+6. Nếu hai cụm được nối:
+   - Chọn key nhỏ hơn.
+   - Update toàn bộ case của cụm còn lại sang key mới trong cùng transaction.
+   - Append `CASE_CLUSTER_MERGED` cho các case bị đổi key.
+7. Tính severity.
+8. Update case + append `CASE_ENRICHED`/`CASE_LINKED`.
+9. Nếu S2 lỗi: `graph_status=UNAVAILABLE`, giữ PENDING/PARTIAL, backoff.
+10. Sau max attempts: `FAILED`, case vẫn còn.
 
 ### 8.6. Severity
 
@@ -1163,19 +1327,25 @@ Base:
   LOW    -> P3
 
 +1 mức nếu >=2 case liên quan trong 30 ngày
-+1 mức nếu reasonCodes có F1/F2/F5 tương ứng
++1 mức nếu có >=2 nhóm D/I/V >= 60
 Clamp P1..P3
 ```
 
+Không dùng F1/F2/F5 cũ. Severity dùng:
+- `risk_level`
+- số case liên quan
+- số nhóm mạnh D/I/V
+- `reason_codes` chỉ để hiển thị/audit.
+
 Ví dụ:
 
-| Case | Risk | Related | Reason | Severity |
+| Case | Risk | Related | Strong groups D/I/V | Severity |
 |---|---|---|---:|---|
-| A | HIGH | 0 | Không | P1 |
-| B | MEDIUM | 2 | Có | P1 |
-| C | MEDIUM | 0 | Không | P2 |
-| D | LOW | 0 | Không | P3 |
-| E | HIGH | 3 | Có | P1 |
+| A | HIGH | 0 | 1 | P1 |
+| B | MEDIUM | 2 | 2 | P1 |
+| C | MEDIUM | 0 | 1 | P2 |
+| D | LOW | 0 | 0 | P3 |
+| E | HIGH | 3 | 2 | P1 |
 
 Severity **không** dùng để cấp/từ chối trial.
 
@@ -1254,8 +1424,8 @@ Business 4xx:
 | Event | Producer | Consumer | Payload chính |
 |---|---|---|---|
 | `account.registered.v1` | S1 | S2 | userId, accountCreatedAt, registrationIp, emailDomainKey |
-| `trial.activated.v1` | S1 | S2, S3 | claimId, userId, campaignId, riskScore, riskLevel, decision, reasons, activatedAt, expiresAt |
-| `trial.rejected.v1` | S1 | S2, S3 | claimId, userId, campaignId, riskScore, riskLevel, decision, reasons, rejectedAt |
+| `trial.activated.v1` | S1 | S2, S3 | claimId, userId, campaignId, riskScore, riskLevel, decision, groupScores, strongGroupCount, reasons, activatedAt, expiresAt |
+| `trial.rejected.v1` | S1 | S2, S3 | claimId, userId, campaignId, riskScore, riskLevel, decision, groupScores, strongGroupCount, reasons, rejectedAt |
 | `trial.expired.v1` | S1 | S2, S3 | claimId, userId, campaignId, expiredAt |
 | `trial.claim_audit.v1` | S1 | S3 | claimId, userId, action, occurredAt |
 
@@ -1286,6 +1456,11 @@ Business 4xx:
 - Event có `aggregateVersion`.
 - S2 projection chỉ update nếu `aggregateVersion > lastVersion`.
 - `trial.activated`/`trial.expired` đến lệch thứ tự không ghi đè sai.
+- S3 lưu `claim_event_state` cho **mọi** trial event, kể cả khi chưa có case:
+  - `claim_id`, `last_version`, `last_status`.
+  - Event có version <= last_version bị bỏ qua.
+  - Nếu `expired` đến trước `activated`, S3 nhớ trạng thái cuối là EXPIRED; khi tạo case sau đó thì đóng ngay.
+- Inbox chỉ chống trùng event; **không** thay thế version/state ordering.
 
 ### 9.6. Failure handling
 
@@ -1556,6 +1731,11 @@ Làm tương tự cho `account_trial_db`.
 | TC-18 | Health 3 service | 200 |
 | TC-19 | Audit duplicate | 1 record |
 | TC-20 | Case retention | CLOSED |
+| TC-21 | OTP sai hết lượt | `REJECTED`, case `VERIFICATION_FAILED` |
+| TC-22 | S2 timeout ngay sau OTP | Vẫn PENDING, không gửi OTP lại |
+| TC-23 | Hai verify đồng thời | Chỉ một lần tăng `evaluationVersion` |
+| TC-24 | `trial.expired` đến trước `trial.activated` | Không tạo case OPEN sai; case đóng nếu được tạo |
+| TC-25 | Assessment cũ đến muộn | Bị bỏ qua, không ghi đè trạng thái mới |
 
 ### 15.2. Postman
 
@@ -1606,8 +1786,8 @@ Làm tương tự cho `account_trial_db`.
 - 400 account:
   - 240 hợp lệ.
   - 80 shared IP/family.
-  - 80 abuse.
-  - 40 evasive.
+  - 80 abuse, trong đó 40 evasive.
+- Tổng = 400; 40 evasive là **tập con** của 80 abuse, không cộng thêm lần nữa.
 - Seed cố định.
 - Nhãn giả lập.
 - 2 seed: dev/eval.
@@ -1778,14 +1958,16 @@ volumes:
 
 | Tuần | Việc chính | Gate |
 |---|---|---|
-| 1 | Chốt spec v4, contract, event schema, risk formula, test data | Tài liệu + schema |
-| 2 | Walking skeleton: gateway + 3 service + 3 store + health/ready; DB isolation; RMQ spike | 3 health 200, isolation pass |
-| 3 | S1 register/login/claim; S2 graph + D/N base; email normalization | Claim LOW → ACTIVE |
-| 4 | Auto policy; OTP; S3 case; outbox/inbox; expiry | HIGH → case; MEDIUM → verify |
-| 5 | S2 D/N/I/V hoàn chỉnh; rarity/time/confidence; dataset; baseline; FAULT-01 | 2 fault test có số liệu |
-| 6 | UI graph/dashboard; Postman; OpenAPI; CI | Collection + 3 YAML + CI |
-| 7 | Báo cáo, slide, rehearsal | PDF ≥30 trang, slide ≤10 |
-| 8 | Buffer, đo lại, viva | Demo ổn định |
+| 1 | Chốt spec v4.1, contract, event schema, decision function, test data | Tài liệu + schema |
+| 2 | Walking skeleton: gateway + 3 service + 3 store + health/ready; DB isolation; RMQ spike; OpenAPI skeleton | 3 health 200, isolation pass |
+| 3 | S1 register/login/claim với risk giả; OpenAPI S1; unit test S1 | Claim LOW → ACTIVE |
+| 4 | S2 tối giản (fingerprint/IP count); S1 → S2 → S1; OpenAPI S2; test integration | Claim thấp/cao khác nhau |
+| 5 | Auto policy + OTP; RabbitMQ + S3 case; OpenAPI S3; test idempotency | HIGH → case; duplicate không tạo trùng |
+| 6 | FAULT-01 + FAULT-02 có số liệu; Postman ≥10; CI; UI tối thiểu | 2 fault test + collection + CI |
+| 7 | S2 nâng cao D/N/I/V + rarity/decay; cluster/severity; dashboard; OpenAPI final | Thuật toán + dashboard |
+| 8 | Báo cáo, slide, rehearsal, buffer | PDF ≥30 trang, slide ≤10, demo ổn |
+
+**Nguyên tắc:** OpenAPI và test làm cùng service, không dồn hết sang tuần 8.
 
 ### 18.1. Phân công 2 người
 
@@ -1856,13 +2038,16 @@ Cả hai phải hiểu toàn bộ luồng.
 - Làm sao đo precision/recall?
 - AI được dùng ở đâu?
 
+**Câu trả lời mẫu cho “auto 100%”:**  
+“Auto 100% là tự động hóa toàn bộ luồng quyết định — không có admin duyệt. Nó không có nghĩa là phát hiện đúng 100%. Hệ thống dùng nhiều nhóm bằng chứng, soft reject và audit để giảm false positive.”
+
 ---
 
 ## 20. RỦI RO & GIỚI HẠN
 
 | Rủi ro | Mức | Giảm thiểu |
 |---|---|---|
-| Fingerprint OSS 40–60%, spoof | Cao | Dùng confidence, nhiều nhóm, không auto-reject một mình |
+| Fingerprint OSS là tín hiệu xác suất, có thể spoof | Cao | Dùng `device_stability` server-side, nhiều nhóm, không auto-reject một mình |
 | IP chung | Cao | Rarity, N yếu, không reject chỉ vì IP |
 | Disposable email | Trung bình | Identity group, OTP/phone |
 | False positive | Cao | Soft reject, verify, audit, appeal ngoài scope |
@@ -1940,6 +2125,8 @@ Xem mục 7.10.
     "riskScore": 28,
     "riskLevel": "LOW",
     "decision": "ALLOW",
+    "groupScores": { "D": 10, "N": 5, "I": 0, "V": 10 },
+    "strongGroupCount": 0,
     "reasonCodes": [],
     "activatedAt": "2026-11-04T10:00:00Z",
     "expiresAt": "2026-11-11T10:00:00Z"
@@ -1963,6 +2150,8 @@ Xem mục 7.10.
     "riskScore": 78,
     "riskLevel": "HIGH",
     "decision": "REJECT",
+    "groupScores": { "D": 85, "N": 30, "I": 20, "V": 80 },
+    "strongGroupCount": 2,
     "reasonCodes": ["DEVICE_SHARED_FP_TRIAL", "VELOCITY_BURST"],
     "rejectedAt": "2026-11-04T10:05:00Z"
   }
@@ -2031,7 +2220,7 @@ Thiết kế v4 đã chốt:
 
 - **3 service**, dữ liệu riêng.
 - **Auto 100%**, không admin trong critical path.
-- **S2 dùng 4 nhóm D/N/I/V** + rarity + time decay + fingerprint confidence.
+- **S2 dùng 4 nhóm D/N/I/V** + rarity + time decay + `device_stability` server-side.
 - **S3 là Case & Investigation Service** có auto-triage, cluster, severity, audit, retention.
 - **REST cho quyết định nhanh**, **RabbitMQ cho event**.
 - **Outbox S1, inbox S2/S3, DLQ**.

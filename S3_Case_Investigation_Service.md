@@ -69,10 +69,10 @@ Nếu S3 chỉ nhận event rồi trả `GET /api/cases`, nó giống một bả
 |---|---|---|
 | BR-S3-01 | Mỗi `claim_id` có tối đa một case | Một claim không thể sinh ra hai hồ sơ |
 | BR-S3-02 | Chỉ tạo case từ quyết định cuối | `trial.rejected` hoặc `trial.activated` với riskLevel khác LOW |
-| BR-S3-03 | Case event và audit là append-only | Chỉ ghi thêm; không sửa/xóa lịch sử |
+| BR-S3-03 | `case_events` và audit là append-only; case row được cập nhật trạng thái/severity/enrichment | Chỉ lịch sử/audit là bất biến, không phải toàn bộ bảng case |
 | BR-S3-04 | Case phải được enrich từ graph của S2 | Lấy các user liên quan để ghép cụm |
 | BR-S3-05 | S2 lỗi không được làm mất case | Case vẫn tạo; enrichment chuyển `PENDING` và retry |
-| BR-S3-06 | Case liên quan trong 30 ngày thì ghép cụm | Cùng user, cùng campaign, hoặc cùng nhóm graph |
+| BR-S3-06 | Case liên quan trong 30 ngày thì ghép cụm | Campaign chỉ là phạm vi; link cần cùng user hoặc bằng chứng graph đủ mạnh |
 | BR-S3-07 | Severity P1/P2/P3 chỉ để ưu tiên điều tra | Không dùng để cấp/từ chối trial |
 | BR-S3-08 | Case tự đóng theo retention | P1 giữ lâu hơn P3; không cần admin |
 | BR-S3-09 | Chỉ ADMIN xem case detail | USER chỉ xem trạng thái claim của mình |
@@ -131,12 +131,17 @@ CREATE TABLE fraud_cases (
   decision TEXT NOT NULL,          -- AUTO_REJECT | VERIFIED_MONITORED | VERIFICATION_FAILED
   risk_score INT,
   risk_level TEXT,                 -- LOW | MEDIUM | HIGH
+  group_scores_json JSONB NOT NULL DEFAULT '{}',
+  strong_group_count INT NOT NULL DEFAULT 0,
   reason_codes JSONB NOT NULL DEFAULT '[]',
   cluster_key TEXT,                -- case_id nhỏ nhất trong cụm
   severity TEXT,                   -- P1 | P2 | P3
   severity_reasons JSONB NOT NULL DEFAULT '[]',
   status TEXT NOT NULL,            -- OPEN | CLOSED
   enrichment_status TEXT NOT NULL, -- PENDING | PARTIAL | DONE | FAILED
+  enrichment_attempts INT NOT NULL DEFAULT 0,
+  next_enrich_at TIMESTAMPTZ,
+  last_enrich_error TEXT,
   graph_status TEXT,               -- OK | UNAVAILABLE
   opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at TIMESTAMPTZ,
@@ -160,7 +165,7 @@ CREATE INDEX idx_cases_cluster
 CREATE TABLE case_links (
   case_id UUID NOT NULL REFERENCES fraud_cases(case_id),
   related_case_id UUID NOT NULL REFERENCES fraud_cases(case_id),
-  link_type TEXT NOT NULL, -- SAME_USER | SAME_CAMPAIGN | SAME_CLUSTER | SAME_FINGERPRINT | SAME_IP
+  link_type TEXT NOT NULL, -- SAME_USER | SAME_CLUSTER | SAME_FINGERPRINT_RARE | SAME_IP_RARE | SAME_SUBNET_BURST
   confidence NUMERIC(4,3),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (case_id, related_case_id)
@@ -193,7 +198,27 @@ CREATE TABLE s3_inbox (
 );
 ```
 
-### 6.5. `security_audit_events`
+### 6.5. `claim_event_state`
+
+Bảng này lưu trạng thái cuối theo claim, **kể cả khi chưa có case**, để xử lý event đến sai thứ tự.
+
+```sql
+CREATE TABLE claim_event_state (
+  claim_id UUID PRIMARY KEY,
+  last_version INT NOT NULL,
+  last_status TEXT NOT NULL, -- ACTIVE | REJECTED | EXPIRED
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+Quy tắc:
+
+- Event có `aggregateVersion <= last_version` bị bỏ qua.
+- Event mới hơn cập nhật `last_version`, `last_status`.
+- Nếu `trial.expired` đến trước `trial.activated`, S3 nhớ trạng thái cuối là `EXPIRED`.
+- Khi tạo case từ activation đến sau, nếu `last_status=EXPIRED` thì tạo case rồi đóng ngay.
+
+### 6.6. `security_audit_events`
 
 ```sql
 CREATE TABLE security_audit_events (
@@ -251,8 +276,8 @@ Tất cả API public đi qua Gateway. S3 không có endpoint quyết định tr
 
 | Event | S3 làm gì |
 |---|---|
-| `trial.rejected.v1` | Tạo case `AUTO_REJECT` hoặc `VERIFICATION_FAILED` |
-| `trial.activated.v1` với `riskLevel != LOW` | Tạo case `VERIFIED_MONITORED` |
+| `trial.rejected.v1` | Tạo case `AUTO_REJECT` hoặc `VERIFICATION_FAILED`; payload có `groupScores`, `strongGroupCount` |
+| `trial.activated.v1` với `riskLevel != LOW` | Tạo case `VERIFIED_MONITORED`; payload có `groupScores`, `strongGroupCount` |
 | `trial.activated.v1` với `riskLevel = LOW` | Chỉ ghi audit, không tạo case |
 | `trial.expired.v1` | Đóng case nếu có |
 | `trial.claim_audit.v1` | Ghi `security_audit_events` |
@@ -261,13 +286,19 @@ Tất cả API public đi qua Gateway. S3 không có endpoint quyết định tr
 
 1. Mở transaction PostgreSQL.
 2. Kiểm tra `s3_inbox` theo `eventId`; nếu đã có thì commit/ack và bỏ qua.
-3. Nếu là event tạo case:
+3. Cập nhật `claim_event_state` theo `aggregateVersion`:
+   - `version <= last_version` → event cũ, bỏ qua.
+   - `version > last_version` → cập nhật `last_version`, `last_status`.
+4. Nếu là event tạo case:
    - Kiểm tra `fraud_cases.claim_id` đã tồn tại chưa.
    - Nếu chưa: insert case + `CASE_CREATED` event.
+   - Nếu `claim_event_state.last_status = EXPIRED` → tạo case rồi đóng ngay với lý do `TRIAL_EXPIRED`.
    - Nếu rồi: bỏ qua.
-4. Insert `s3_inbox`.
-5. Commit.
-6. Ack message.
+5. Insert `s3_inbox`.
+6. Commit.
+7. Ack message.
+
+> Event `trial.expired` đến trước `trial.activated`: S3 lưu state EXPIRED, chưa tạo case. Khi activation cũ đến sau, bỏ qua theo version. Nếu activation mới hơn đến sau, tạo case và đóng ngay.
 
 > Ack **sau khi commit**. Nếu commit lỗi, không ack; RabbitMQ sẽ giao lại.
 
@@ -282,10 +313,12 @@ Chạy nền, không chặn consumer:
    ```
 3. Nhận danh sách user liên quan.
 4. Tìm case của các user đó trong 30 ngày.
+   - `campaign_id` chỉ là phạm vi so sánh, không phải tiêu chí ghép cụm.
+   - Chỉ link khi cùng user, cùng cluster S2, hoặc cùng fingerprint/IP/subnet hiếm đủ ngưỡng.
 5. Nếu có:
-   - Tạo `case_links`.
+   - Tạo `case_links` với `SAME_USER`, `SAME_CLUSTER`, `SAME_FINGERPRINT_RARE`, `SAME_IP_RARE`, `SAME_SUBNET_BURST`.
    - Chọn `cluster_key` = `case_id` nhỏ nhất trong cụm.
-   - Cập nhật `cluster_key` cho các case liên quan nếu cần.
+   - Nếu hai cụm được nối: chọn key nhỏ hơn, update toàn bộ case của cụm còn lại sang key mới trong cùng transaction, append `CASE_CLUSTER_MERGED`.
 6. Tính severity.
 7. Cập nhật case:
    - `enrichment_status = DONE`
@@ -311,20 +344,22 @@ Bắt đầu từ risk level:
   LOW    → P3
 
 Nếu có >= 2 case liên quan trong 30 ngày: nâng 1 mức
-Nếu reasonCodes có F1/F2/F5:            nâng 1 mức
+Nếu có >= 2 nhóm D/I/V >= 60:           nâng 1 mức
 
 Không thấp hơn P3, không cao hơn P1.
 ```
 
+Không dùng F1/F2/F5. Severity dùng `risk_level`, số case liên quan, `strong_group_count` (lấy từ event hoặc `group_scores_json`).
+
 ### 9.2. Ví dụ
 
-| Case | Risk | Case liên quan | Reason | Kết quả |
+| Case | Risk | Case liên quan | Strong groups D/I/V | Kết quả |
 |---|---|---|---:|---|
-| A | HIGH | 0 | Không | P1 |
-| B | MEDIUM | 2 | Có F1 | P1 |
-| C | MEDIUM | 0 | Không | P2 |
-| D | LOW | 0 | Không | P3 |
-| E | HIGH | 3 | Có F2 | P1 |
+| A | HIGH | 0 | 1 | P1 |
+| B | MEDIUM | 2 | 2 | P1 |
+| C | MEDIUM | 0 | 1 | P2 |
+| D | LOW | 0 | 0 | P3 |
+| E | HIGH | 3 | 2 | P1 |
 
 ### 9.3. Vì sao không dùng severity để cấp trial?
 
@@ -339,6 +374,7 @@ Vì severity là **ưu tiên điều tra sau khi đã có quyết định**. N�
 | S3 down | RabbitMQ giữ message; S3 lên xử lý lại; inbox chống trùng |
 | S2 down khi enrich | Case vẫn tạo; enrichment `PENDING`; retry; graph API trả 503/504 |
 | Event gửi lặp | `s3_inbox` bỏ qua; unique `claim_id` chống case trùng |
+| Event đến sai thứ tự | `claim_event_state` so version; event cũ bị bỏ qua; không tạo case OPEN sai |
 | Event sai schema | Không ack; retry có giới hạn; sau đó DLQ |
 | DB S3 down | Không ack; RabbitMQ giao lại; retry |
 | Case hết retention | Job tự đóng; append `CASE_CLOSED` |
@@ -360,6 +396,8 @@ Vì severity là **ưu tiên điều tra sau khi đã có quyết định**. N�
 | TC-S3-08 | S2 down khi `GET /graph` | 503/504, không trả dữ liệu giả |
 | TC-S3-09 | Event sai schema | Vào DLQ |
 | TC-S3-10 | Hết retention | Case `CLOSED`, có `CASE_CLOSED` event |
+| TC-S3-11 | `trial.expired` đến trước `trial.activated` | Không tạo case OPEN sai; state cuối là EXPIRED |
+| TC-S3-12 | Hai cụm được nối | `cluster_key` hội tụ về key nhỏ hơn; có `CASE_CLUSTER_MERGED` |
 
 ---
 
