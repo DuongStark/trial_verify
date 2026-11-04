@@ -10,7 +10,9 @@ Hệ thống phát hiện lạm dụng trial đa tài khoản bằng browser fin
 - [ ] M1 — Bộ xương 3 service + gateway + health  
   - [x] S1 NestJS + `GET /health`  
   - [x] S2 NestJS + `GET /health`  
-  - [x] S3 NestJS + `GET /health`
+  - [x] S3 NestJS + `GET /health`  
+  - [x] Dockerfile + `.dockerignore` cho 3 service  
+  - [x] Build và chạy thử từng container
 - [ ] M2 — S1 Account & Trial
 - [ ] M3 — S2 Graph & Risk tối giản
 - [ ] M4 — Auto policy + OTP
