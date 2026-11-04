@@ -12,7 +12,9 @@ Hệ thống phát hiện lạm dụng trial đa tài khoản bằng browser fin
   - [x] S2 NestJS + `GET /health`  
   - [x] S3 NestJS + `GET /health`  
   - [x] Dockerfile + `.dockerignore` cho 3 service  
-  - [x] Build và chạy thử từng container
+  - [x] Build và chạy thử từng container  
+  - [x] `docker-compose.yml` + PostgreSQL + Neo4j + RabbitMQ  
+  - [x] Kiểm tra DB isolation, Neo4j, RabbitMQ health
 - [ ] M2 — S1 Account & Trial
 - [ ] M3 — S2 Graph & Risk tối giản
 - [ ] M4 — Auto policy + OTP
