@@ -66,9 +66,12 @@ Mỗi bước nên có:
   - Docker Engine + Docker Compose.
   - Git, VS Code.
   - Repo skeleton, commit đầu tiên.
-- **M1.1 chưa xong**:
-  - Chưa tạo project NestJS cho S1.
-  - Bước tiếp theo: tạo `apps/account-trial-service` bằng NestJS, thêm `GET /health`.
+- **M1.1 xong**:
+  - Đã tạo `apps/account-trial-service` bằng NestJS.
+  - Có `GET /health` trả `{status:"ok", service:"account-trial"}`.
+  - Unit test health đã pass.
+- **Bước tiếp theo — M1.2**:
+  - Tạo NestJS cho S2 và S3, mỗi service có `GET /health`.
 
 ## 7. Quy ước kỹ thuật
 

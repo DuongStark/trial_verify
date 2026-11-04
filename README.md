@@ -7,7 +7,8 @@ Hệ thống phát hiện lạm dụng trial đa tài khoản bằng browser fin
 ## Trạng thái
 
 - [x] M0 — Cài môi trường (Node, Docker, Git, VS Code)
-- [ ] M1 — Bộ xương 3 service + gateway + health
+- [ ] M1 — Bộ xương 3 service + gateway + health  
+  - [x] S1 NestJS + `GET /health`
 - [ ] M2 — S1 Account & Trial
 - [ ] M3 — S2 Graph & Risk tối giản
 - [ ] M4 — Auto policy + OTP
