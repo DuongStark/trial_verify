@@ -66,14 +66,17 @@ Một công ty cung cấp ứng dụng AI có gói Premium dùng thử 7 ngày. 
 | Ví dụ JSON sai điểm | Sửa score 62.5 → 63; decision REJECT vì D,V >= 60 |
 | OTP/S2 timeout sau verify chưa rõ | Thêm `verification_state`, `risk_check_context=POST_VERIFY`; không gửi OTP lại |
 | OTP sai hết lượt mơ hồ | Chốt `REJECTED`; hết hạn xác minh → `CANCELLED` |
-| S3 event sai thứ tự | Thêm `claim_event_state` + rule version cho S3 |
+| S3 event sai thứ tự | Thêm `claim_event_state`; event cũ không ghi đè state nhưng vẫn bổ sung case CLOSED nếu thiếu |
 | Ghép cụm theo campaign quá rộng | Campaign chỉ là phạm vi; link cần user/graph evidence |
 | Thiếu `next_enrich_at` | Bổ sung schema + worker |
 | Severity còn dùng F1/F2/F5 | Chuyển sang `risk_level` + related cases + `strong_group_count` |
 | Append-only dễ hiểu nhầm | Case row được update; chỉ `case_events`/audit là bất biến |
 | Dataset 400 bị cộng lệch | 240 + 80 + 80, 40 evasive là tập con |
 | Feature normalization chưa rõ | Thêm bảng công thức, cửa sổ thời gian, cách đếm |
-| Client fingerprint confidence bị tin | Bỏ khỏi decision; dùng `device_stability` server-side |
+| Client fingerprint confidence bị tin | Bỏ khỏi decision; dùng `device_stability` server-side; ghi rõ giới hạn cap D |
+| Disposable + velocity chưa khớp | Sửa mô tả: disposable một mình chỉ VERIFY; REJECT cần đủ hàm quyết định |
+| Worker enrichment bị kẹt NULL/PARTIAL | `next_enrich_at NOT NULL DEFAULT now()`; worker chọn cả PENDING và PARTIAL |
+| Ví dụ số cũ | Sửa activated 28→7, rejected 78→63, rarity 0,90→0,84 |
 | OpenAPI/test dồn cuối | Làm cùng service; kế hoạch 8 tuần đã sửa |
 
 ---
@@ -904,8 +907,9 @@ I = 100 * min(1,
 
 Quy tắc:
 
-- Disposable một mình = 55 điểm; chưa đủ REJECT.
-- Disposable + velocity cao → REJECT.
+- Disposable một mình = 55 điểm; **chưa phải nhóm mạnh** (ngưỡng 60).
+- Disposable một mình → tối đa VERIFY.
+- Disposable kết hợp thêm tín hiệu identity/velocity đủ mạnh có thể dẫn đến REJECT **nếu thỏa hàm quyết định**.
 - Không block Gmail/Yahoo/Outlook như disposable.
 
 #### Nhóm V — Velocity/Behavior
@@ -944,7 +948,7 @@ Ví dụ với N=1000:
 
 | Support | Rarity |
 |---:|---:|
-| 2 | 0.90 |
+| 2 | 0.84 |
 | 50 | 0.43 |
 | 100 | 0.33 |
 | 800 | 0.03 |
@@ -971,6 +975,13 @@ decay = 0.5 ^ (age_days / 14)
   - Thấy >= 7 ngày → stability = 1.
 - `device_stability < 0.3` → cap D = 30.
 - `visitorId` null → D = 0.
+
+**Giới hạn cần ghi rõ:**
+
+- `device_stability` chỉ đo **số ngày đã thấy fingerprint**, không chứng minh fingerprint đáng tin.
+- Fingerprint mới thấy 1–2 ngày bị cap D <= 30, kể cả khi nó dùng chung cho nhiều tài khoản.
+- Đây là lựa chọn **thận trọng để giảm false positive**: trường hợp mới sẽ đi VERIFY thay vì REJECT.
+- Khi demo, muốn chứng minh tín hiệu fingerprint mạnh thì phải seed lịch sử quan sát nhiều ngày; nếu không, chấp nhận kết quả VERIFY.
 
 ### 7.9. Decision policy — một hàm duy nhất
 
@@ -1195,11 +1206,12 @@ CREATE TABLE fraud_cases (
   status TEXT NOT NULL DEFAULT 'OPEN',
   enrichment_status TEXT NOT NULL DEFAULT 'PENDING',
   enrichment_attempts INT NOT NULL DEFAULT 0,
-  next_enrich_at TIMESTAMPTZ,
+  next_enrich_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_enrich_error TEXT,
   graph_status TEXT,
   opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at TIMESTAMPTZ,
+  close_reason TEXT, -- TRIAL_EXPIRED | SUPERSEDED_BY_NEWER_EVENT | RETENTION
   retention_until TIMESTAMPTZ,
   version INT NOT NULL DEFAULT 0
 );
@@ -1266,35 +1278,51 @@ CREATE TABLE security_audit_events (
 | `trial.expired.v1` | Đóng case nếu có |
 | `trial.claim_audit.v1` | Ghi audit |
 
-Consumer:
+Consumer — tách **hai việc độc lập**:
 
 1. Begin transaction.
 2. Check `s3_inbox` theo `eventId`; nếu đã có → commit/ack, bỏ qua.
-3. Cập nhật `claim_event_state` theo `aggregateVersion`:
-   - Nếu `version <= last_version` → event cũ, bỏ qua.
-   - Nếu `version > last_version` → cập nhật `last_version` và `last_status`.
-4. Nếu là event tạo case:
-   - Nếu `claim_id` đã có case → bỏ qua tạo mới.
-   - Nếu chưa: insert case + `CASE_CREATED`.
-   - Nếu `last_status` hiện tại là `EXPIRED` → tạo case rồi đóng ngay với lý do `TRIAL_EXPIRED`.
-5. Insert inbox.
-6. Commit.
-7. Ack.
+3. Đọc `claim_event_state` hiện tại.
+4. **Cập nhật trạng thái**:
+   - Nếu `version > last_version` → cập nhật `last_version`, `last_status`.
+   - Nếu `version <= last_version` → **không ghi đè trạng thái**.
+5. **Bổ sung hồ sơ nếu còn thiếu**:
+   - Event `trial.rejected` luôn là case-worthy.
+   - Event `trial.activated` là case-worthy nếu `riskLevel != LOW`.
+   - Nếu chưa có case và event là case-worthy → tạo case từ snapshot của event.
+   - Nếu event là bản cũ (`version <= last_version`) hoặc trạng thái cuối là `EXPIRED`:
+     - Tạo case ở trạng thái `CLOSED`.
+     - `close_reason = TRIAL_EXPIRED` nếu trạng thái cuối là EXPIRED.
+     - `close_reason = SUPERSEDED_BY_NEWER_EVENT` nếu trạng thái cuối khác EXPIRED.
+   - Nếu event là bản mới và trạng thái cuối là ACTIVE/REJECTED → tạo case theo luồng bình thường.
+6. Nếu case đã tồn tại:
+   - Không đổi decision/severity từ event cũ.
+   - Event mới hơn có thể đóng case nếu là `trial.expired`.
+   - Có thể append `STALE_EVENT_IGNORED` để audit.
+7. Insert inbox.
+8. Commit.
+9. Ack.
 
 Quy tắc event sai thứ tự:
 
-- `trial.expired` đến trước `trial.activated`:
-  - Lưu `claim_event_state.last_status=EXPIRED`.
-  - Chưa có case nên không tạo.
-  - Khi `trial.activated` cũ hơn đến sau → bị bỏ qua theo version.
-  - Nếu `trial.activated` mới hơn đến sau → tạo case và đóng ngay nếu trạng thái cuối là EXPIRED.
+- `trial.expired` version 3 đến trước `trial.activated` version 2:
+  - Lưu state `EXPIRED`, version 3.
+  - Chưa có case.
+  - Khi activation version 2 đến: không ghi đè state, **nhưng vẫn tạo case CLOSED** với lý do `TRIAL_EXPIRED`.
+  - Kết quả: có đúng **một case CLOSED**, không có case OPEN sai.
+- `trial.activated` version 2 đến trước, `trial.expired` version 3 đến sau:
+  - Tạo case bình thường.
+  - Event expired đóng case.
 - `trial.rejected` và `trial.activated` cùng claim:
-  - Chỉ event có version cao hơn được cập nhật trạng thái cuối.
+  - State chỉ lấy version cao hơn.
   - Case chỉ tạo một lần theo `claim_id`.
+  - Event cũ vẫn có thể tạo hồ sơ nếu chưa có case, nhưng case phải `CLOSED` với lý do `SUPERSEDED_BY_NEWER_EVENT`.
 
 ### 8.5. Enrichment worker
 
-1. Tìm case `enrichment_status=PENDING` và `next_enrich_at <= now()`.
+1. Tìm case có `enrichment_status IN ('PENDING','PARTIAL')` và `next_enrich_at <= now()`.
+   - Khi tạo case: `next_enrich_at = now()`.
+   - Nếu `next_enrich_at` NULL (dữ liệu cũ), coi như `now()` để không bị kẹt.
 2. Gọi S2 `/internal/graph/users/{userId}/neighbors`.
 3. Tìm case liên quan trong 30 ngày.
    - `campaign_id` chỉ là **phạm vi so sánh**, không phải tiêu chí ghép cụm.
@@ -1458,9 +1486,10 @@ Business 4xx:
 - `trial.activated`/`trial.expired` đến lệch thứ tự không ghi đè sai.
 - S3 lưu `claim_event_state` cho **mọi** trial event, kể cả khi chưa có case:
   - `claim_id`, `last_version`, `last_status`.
-  - Event có version <= last_version bị bỏ qua.
-  - Nếu `expired` đến trước `activated`, S3 nhớ trạng thái cuối là EXPIRED; khi tạo case sau đó thì đóng ngay.
-- Inbox chỉ chống trùng event; **không** thay thế version/state ordering.
+  - Event có version <= last_version **không ghi đè trạng thái**.
+  - Nhưng event case-worthy cũ vẫn được dùng để **bổ sung hồ sơ còn thiếu**.
+  - Nếu `expired` đến trước `activated`, S3 tạo case `CLOSED` lý do `TRIAL_EXPIRED` khi activation cũ đến sau.
+- Inbox chỉ chống trùng event; **không** thay thế version/state ordering hoặc logic bổ sung hồ sơ.
 
 ### 9.6. Failure handling
 
@@ -1734,7 +1763,7 @@ Làm tương tự cho `account_trial_db`.
 | TC-21 | OTP sai hết lượt | `REJECTED`, case `VERIFICATION_FAILED` |
 | TC-22 | S2 timeout ngay sau OTP | Vẫn PENDING, không gửi OTP lại |
 | TC-23 | Hai verify đồng thời | Chỉ một lần tăng `evaluationVersion` |
-| TC-24 | `trial.expired` đến trước `trial.activated` | Không tạo case OPEN sai; case đóng nếu được tạo |
+| TC-24 | `trial.expired` đến trước `trial.activated` | Có đúng một case `CLOSED` lý do `TRIAL_EXPIRED`; không có case OPEN sai |
 | TC-25 | Assessment cũ đến muộn | Bị bỏ qua, không ghi đè trạng thái mới |
 
 ### 15.2. Postman
@@ -2122,7 +2151,7 @@ Xem mục 7.10.
     "userId": "user_001",
     "campaignId": "PREMIUM_7_DAYS",
     "assessmentId": "ra_001",
-    "riskScore": 28,
+    "riskScore": 7,
     "riskLevel": "LOW",
     "decision": "ALLOW",
     "groupScores": { "D": 10, "N": 5, "I": 0, "V": 10 },
@@ -2147,7 +2176,7 @@ Xem mục 7.10.
     "userId": "user_002",
     "campaignId": "PREMIUM_7_DAYS",
     "assessmentId": "ra_002",
-    "riskScore": 78,
+    "riskScore": 63,
     "riskLevel": "HIGH",
     "decision": "REJECT",
     "groupScores": { "D": 85, "N": 30, "I": 20, "V": 80 },

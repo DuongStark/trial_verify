@@ -140,11 +140,12 @@ CREATE TABLE fraud_cases (
   status TEXT NOT NULL,            -- OPEN | CLOSED
   enrichment_status TEXT NOT NULL, -- PENDING | PARTIAL | DONE | FAILED
   enrichment_attempts INT NOT NULL DEFAULT 0,
-  next_enrich_at TIMESTAMPTZ,
+  next_enrich_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_enrich_error TEXT,
   graph_status TEXT,               -- OK | UNAVAILABLE
   opened_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at TIMESTAMPTZ,
+  close_reason TEXT, -- TRIAL_EXPIRED | SUPERSEDED_BY_NEWER_EVENT | RETENTION
   retention_until TIMESTAMPTZ,
   version INT NOT NULL DEFAULT 0
 );
@@ -178,7 +179,7 @@ CREATE TABLE case_links (
 CREATE TABLE case_events (
   event_id UUID PRIMARY KEY,
   case_id UUID NOT NULL REFERENCES fraud_cases(case_id),
-  event_type TEXT NOT NULL, -- CASE_CREATED | CASE_ENRICHED | CASE_LINKED | CASE_CLOSED | AUDIT_RECORDED
+  event_type TEXT NOT NULL, -- CASE_CREATED | CASE_ENRICHED | CASE_LINKED | CASE_CLUSTER_MERGED | CASE_CLOSED | STALE_EVENT_IGNORED | AUDIT_RECORDED
   payload_json JSONB NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -286,19 +287,30 @@ Tất cả API public đi qua Gateway. S3 không có endpoint quyết định tr
 
 1. Mở transaction PostgreSQL.
 2. Kiểm tra `s3_inbox` theo `eventId`; nếu đã có thì commit/ack và bỏ qua.
-3. Cập nhật `claim_event_state` theo `aggregateVersion`:
-   - `version <= last_version` → event cũ, bỏ qua.
+3. Đọc `claim_event_state` hiện tại.
+4. **Cập nhật trạng thái**:
    - `version > last_version` → cập nhật `last_version`, `last_status`.
-4. Nếu là event tạo case:
-   - Kiểm tra `fraud_cases.claim_id` đã tồn tại chưa.
-   - Nếu chưa: insert case + `CASE_CREATED` event.
-   - Nếu `claim_event_state.last_status = EXPIRED` → tạo case rồi đóng ngay với lý do `TRIAL_EXPIRED`.
-   - Nếu rồi: bỏ qua.
-5. Insert `s3_inbox`.
-6. Commit.
-7. Ack message.
+   - `version <= last_version` → không ghi đè trạng thái.
+5. **Bổ sung hồ sơ nếu còn thiếu**:
+   - `trial.rejected` luôn case-worthy.
+   - `trial.activated` case-worthy nếu `riskLevel != LOW`.
+   - Nếu chưa có case và event case-worthy → tạo case từ snapshot event.
+   - Nếu event cũ hơn hoặc trạng thái cuối là `EXPIRED`:
+     - Case `CLOSED`.
+     - `close_reason = TRIAL_EXPIRED` nếu trạng thái cuối EXPIRED.
+     - `close_reason = SUPERSEDED_BY_NEWER_EVENT` nếu trạng thái cuối khác.
+   - Nếu event mới và trạng thái cuối ACTIVE/REJECTED → tạo case bình thường.
+6. Nếu case đã tồn tại:
+   - Không đổi decision/severity từ event cũ.
+   - Event mới hơn có thể đóng case nếu là `trial.expired`.
+   - Append `STALE_EVENT_IGNORED` nếu cần audit.
+7. Insert `s3_inbox`.
+8. Commit.
+9. Ack message.
 
-> Event `trial.expired` đến trước `trial.activated`: S3 lưu state EXPIRED, chưa tạo case. Khi activation cũ đến sau, bỏ qua theo version. Nếu activation mới hơn đến sau, tạo case và đóng ngay.
+> **Ví dụ bắt buộc phải đúng:** `trial.expired` version 3 đến trước `trial.activated` version 2. S3 lưu state EXPIRED; khi activation cũ đến, không ghi đè state nhưng **vẫn tạo case CLOSED** với lý do `TRIAL_EXPIRED`. Kết quả có đúng một case CLOSED, không có case OPEN sai.
+
+> Inbox chỉ chống trùng event; không thay thế logic bổ sung hồ sơ.
 
 > Ack **sau khi commit**. Nếu commit lỗi, không ack; RabbitMQ sẽ giao lại.
 
@@ -306,7 +318,9 @@ Tất cả API public đi qua Gateway. S3 không có endpoint quyết định tr
 
 Chạy nền, không chặn consumer:
 
-1. Tìm case có `enrichment_status = PENDING` và `next_enrich_at <= now()`.
+1. Tìm case có `enrichment_status IN ('PENDING','PARTIAL')` và `next_enrich_at <= now()`.
+   - Khi tạo case: `next_enrich_at = now()`.
+   - Nếu `next_enrich_at` NULL (dữ liệu cũ), coi như `now()` để không bị kẹt.
 2. Gọi S2:
    ```http
    GET /internal/graph/users/{userId}/neighbors?depth=1&limit=50
@@ -396,7 +410,7 @@ Vì severity là **ưu tiên điều tra sau khi đã có quyết định**. N�
 | TC-S3-08 | S2 down khi `GET /graph` | 503/504, không trả dữ liệu giả |
 | TC-S3-09 | Event sai schema | Vào DLQ |
 | TC-S3-10 | Hết retention | Case `CLOSED`, có `CASE_CLOSED` event |
-| TC-S3-11 | `trial.expired` đến trước `trial.activated` | Không tạo case OPEN sai; state cuối là EXPIRED |
+| TC-S3-11 | `trial.expired` đến trước `trial.activated` | Có đúng **một case CLOSED** lý do `TRIAL_EXPIRED`; không có case OPEN sai |
 | TC-S3-12 | Hai cụm được nối | `cluster_key` hội tụ về key nhỏ hơn; có `CASE_CLUSTER_MERGED` |
 
 ---
