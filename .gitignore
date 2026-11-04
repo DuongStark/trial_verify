@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Local container data
+postgres-data/
+neo4j-data/
+rabbitmq-data/
+volumes/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Docker override
+docker-compose.override.yml
