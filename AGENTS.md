@@ -66,18 +66,17 @@ Mỗi bước nên có:
   - Docker Engine + Docker Compose.
   - Git, VS Code.
   - Repo skeleton, commit đầu tiên.
-- **M1.1 + M1.2 + M1.3 + M1.4 xong**:
-  - Đã tạo 3 service NestJS: S1, S2, S3.
-  - Mỗi service có `GET /health`.
-  - Unit test health đã pass cho cả 3.
+- **M1 hoàn thành**:
+  - 3 service NestJS: S1, S2, S3; mỗi service có `GET /health`.
+  - Unit test health pass cho cả 3.
   - Mỗi service có `Dockerfile` + `.dockerignore`.
   - `docker-compose.yml` chạy 3 service + PostgreSQL + Neo4j + RabbitMQ.
-  - Đã kiểm tra health, DB isolation, Neo4j, RabbitMQ.
-- **Bước tiếp theo — M1.5**:
-  - Viết NGINX gateway.
-  - Chỉ expose một port public `8080`.
-  - Route `/api/health/account`, `/api/health/risk`, `/api/health/case`.
-  - Sau đó là M2 — nghiệp vụ S1.
+  - NGINX gateway tại `localhost:8080`; 3001–3003 chỉ nội bộ.
+  - Đã kiểm tra health qua gateway, DB isolation, Neo4j, RabbitMQ.
+- **Bước tiếp theo — M2**:
+  - Bắt đầu nghiệp vụ S1: AuthModule, AccountsModule, TrialsModule.
+  - Register/login/JWT, campaign, claim với risk đơn giản.
+  - Làm từng bước nhỏ, test sau mỗi bước.
 
 ## 7. Quy ước kỹ thuật
 
