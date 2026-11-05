@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S1 — Account &amp; Trial — Database Design</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;
+      --text: #172033;
+      --muted: #5b677a;
+      --line: #dce3ee;
+      --primary: #1f5eff;
+      --primary-soft: #e8efff;
+      --green: #0f8a5f;
+      --green-soft: #e7f7ef;
+      --amber: #a15c00;
+      --amber-soft: #fff4dd;
+      --red: #b42318;
+      --red-soft: #ffebe8;
+      --purple: #6b3fa0;
+      --purple-soft: #f2eafb;
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(23, 32, 51, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .toc {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 28px 20px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(10px);
+    }
+
+    .toc h2 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+
+    .toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toc a:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    main { padding: 34px 42px 80px; min-width: 0; }
+
+    .hero {
+      background: linear-gradient(135deg, #12224a 0%, #1f5eff 60%, #6b3fa0 100%);
+      color: white;
+      border-radius: 22px;
+      padding: 38px 40px;
+      box-shadow: var(--shadow);
+      margin-bottom: 30px;
+    }
+
+    .hero .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      opacity: 0.8;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 10px 0 8px;
+      font-size: clamp(1.9rem, 3vw, 3rem);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 850px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 1.02rem;
+    }
+
+    .hero .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      font-size: 0.78rem;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      white-space: nowrap;
+    }
+
+    section { margin: 34px 0; scroll-margin-top: 20px; }
+
+    h2 {
+      font-size: 1.55rem;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+
+    h3 {
+      font-size: 1.12rem;
+      margin: 26px 0 8px;
+    }
+
+    h4 {
+      font-size: 0.98rem;
+      margin: 20px 0 6px;
+    }
+
+    p { margin: 8px 0 12px; }
+    ul, ol { margin: 8px 0 14px; padding-left: 22px; }
+    li { margin: 5px 0; }
+
+    .lead { color: var(--muted); font-size: 1.02rem; max-width: 900px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 4px 14px rgba(23, 32, 51, 0.04);
+    }
+
+    .card h3 { margin-top: 0; }
+
+    .card .number {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+    }
+
+    .callout {
+      border-left: 4px solid var(--primary);
+      background: var(--primary-soft);
+      padding: 14px 18px;
+      border-radius: 0 12px 12px 0;
+      margin: 16px 0;
+    }
+
+    .callout.ok {
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .callout.warn {
+      border-color: #e5a100;
+      background: var(--amber-soft);
+    }
+
+    .callout.danger {
+      border-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .callout strong { display: block; margin-bottom: 4px; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      margin: 14px 0 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: var(--surface-2);
+      color: #344054;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fbfcff; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", monospace;
+      font-size: 0.86em;
+      background: #eef2f8;
+      padding: 2px 5px;
+      border-radius: 6px;
+      color: #16325c;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #dbeafe;
+      padding: 16px 18px;
+      border-radius: 12px;
+      overflow: auto;
+      font-size: 0.86rem;
+      line-height: 1.55;
+      margin: 12px 0 18px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.pk { background: var(--purple-soft); color: var(--purple); }
+    .badge.fk { background: var(--primary-soft); color: var(--primary); }
+    .badge.uk { background: var(--amber-soft); color: var(--amber); }
+    .badge.idx { background: var(--green-soft); color: var(--green); }
+    .badge.req { background: #eef2f8; color: #344054; }
+    .badge.opt { background: #f4f6fb; color: var(--muted); }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 0.85rem; }
+
+    .diagram {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin: 14px 0 22px;
+      overflow-x: auto;
+    }
+
+    .mermaid { min-width: 680px; }
+
+    .erd-note {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .flow {
+      display: grid;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    .flow-step .step-no {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .flow-step h4 { margin: 0 0 3px; }
+    .flow-step p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 8px 14px;
+      font-size: 0.9rem;
+    }
+
+    .kv dt { color: var(--muted); font-weight: 600; }
+    .kv dd { margin: 0; }
+
+    details {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin: 14px 0;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #24324a;
+    }
+
+    details[open] summary { margin-bottom: 10px; }
+
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 980px) {
+      .page { display: block; }
+      .toc {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 18px 22px;
+      }
+      .toc ol {
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      }
+      main { padding: 24px 20px 60px; }
+      .split { grid-template-columns: 1fr; }
+      .hero { padding: 28px 24px; }
+    }
+
+    @media print {
+      body { background: white; }
+      .toc { display: none; }
+      .page { display: block; }
+      main { padding: 0; }
+      .hero { box-shadow: none; }
+      .card, .table-wrap, .diagram { break-inside: avoid; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <aside class="toc" aria-label="Mục lục">
+    <h2>Mục lục</h2>
+    <ol>
+      <li><a href="#overview">1. Tổng quan S1</a></li>
+      <li><a href="#principles">2. Nguyên tắc thiết kế</a></li>
+      <li><a href="#erd">3. ERD</a></li>
+      <li><a href="#enums">4. Enums</a></li>
+      <li><a href="#tables">5. Các bảng dữ liệu</a></li>
+      <li><a href="#state-machine">6. State machine</a></li>
+      <li><a href="#flows">7. Luồng nghiệp vụ</a></li>
+      <li><a href="#idempotency">8. Idempotency &amp; concurrency</a></li>
+      <li><a href="#indexes">9. Indexes</a></li>
+      <li><a href="#isolation">10. Data isolation</a></li>
+      <li><a href="#examples">11. Dữ liệu mẫu</a></li>
+      <li><a href="#queries">12. Query thường dùng</a></li>
+      <li><a href="#anti-patterns">13. Điều không nên làm</a></li>
+      <li><a href="#qa">14. Q&amp;A bảo vệ</a></li>
+      <li><a href="#rubric">15. Đối chiếu rubric</a></li>
+      <li><a href="#appendix">Phụ lục: Prisma schema</a></li>
+    </ol>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <div class="eyebrow">SOA Project · S1 Account &amp; Trial</div>
+      <h1>Thiết kế cơ sở dữ liệu S1</h1>
+      <p>
+        Tài liệu học tập chi tiết về database của <strong>S1 — Account &amp; Trial Service</strong>:
+        vì sao có từng bảng, từng cột, từng constraint; cách xử lý idempotency, optimistic locking,
+        outbox và các trạng thái trial.
+      </p>
+      <div class="meta">
+        <span class="pill">PostgreSQL · account_trial_db</span>
+        <span class="pill">Prisma 6.19</span>
+        <span class="pill">Bản thiết kế v4.1</span>
+        <span class="pill">Cập nhật: 05/11/2026</span>
+        <span class="pill">Trạng thái: schema đã tạo, API đang làm</span>
+      </div>
+    </header>
+
+    <section id="overview">
+      <h2>1. Tổng quan S1</h2>
+      <p class="lead">
+        S1 là nơi duy nhất quyết định và lưu trạng thái trial của người dùng. S2 chỉ chấm điểm,
+        S3 chỉ lưu hồ sơ. Vì vậy database của S1 là <strong>source of truth</strong> cho tài khoản,
+        campaign và trạng thái claim.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <div class="number">S1</div>
+          <h3>Account &amp; Trial</h3>
+          <p>Đăng ký, đăng nhập, campaign, claim, OTP, trạng thái trial, outbox.</p>
+        </div>
+        <div class="card">
+          <div class="number">PG</div>
+          <h3>PostgreSQL</h3>
+          <p>Database <code>account_trial_db</code>, user <code>account_svc</code>.</p>
+        </div>
+        <div class="card">
+          <div class="number">4</div>
+          <h3>Bảng chính</h3>
+          <p><code>accounts</code>, <code>trial_campaigns</code>, <code>trial_claims</code>, <code>s1_outbox</code>.</p>
+        </div>
+        <div class="card">
+          <div class="number">0</div>
+          <h3>Foreign key xuyên service</h3>
+          <p>Không có FK sang S2/S3. Chỉ tham chiếu bằng ID và event.</p>
+        </div>
+      </div>
+
+      <div class="callout ok">
+        <strong>S1 sở hữu gì?</strong>
+        Tài khoản, mật khẩu hash, campaign, claim, trạng thái trial, lịch sử retry/verification,
+        và outbox event. S1 không sở hữu fingerprint, risk assessment hay fraud case.
+      </div>
+    </section>
+
+    <section id="principles">
+      <h2>2. Nguyên tắc thiết kế</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>1. Data ownership</h3>
+          <p>Chỉ S1 được query <code>account_trial_db</code>. Service khác dùng API/event.</p>
+        </div>
+        <div class="card">
+          <h3>2. Source of truth</h3>
+          <p>Trạng thái claim trong S1 là quyết định cuối. S2 chỉ trả khuyến nghị.</p>
+        </div>
+        <div class="card">
+          <h3>3. Idempotency</h3>
+          <p>Unique key + request hash + optimistic version để request lặp không tạo bản ghi mới.</p>
+        </div>
+        <div class="card">
+          <h3>4. Outbox</h3>
+          <p>Ghi event cùng transaction nghiệp vụ, publisher gửi sau. Không mất event.</p>
+        </div>
+        <div class="card">
+          <h3>5. Snapshot</h3>
+          <p>Lưu risk score/reasons tại thời điểm quyết định để hiển thị và audit.</p>
+        </div>
+        <div class="card">
+          <h3>6. No cross-service FK</h3>
+          <p><code>assessment_id</code>, <code>claim_id</code> chỉ là tham chiếu logic, không FK.</p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <strong>Không dùng chung database.</strong>
+        S1, S2, S3 có store riêng. Nếu cần join dữ liệu, dùng API hoặc event/projection,
+        không mở connection sang DB của service khác.
+      </div>
+    </section>
+
+    <section id="erd">
+      <h2>3. ERD</h2>
+      <p class="lead">
+        Sơ đồ quan hệ logic. Đường nét đứt thể hiện tham chiếu logic qua ID, không phải foreign key vật lý.
+      </p>
+
+      <div class="diagram">
+        <pre class="mermaid">
+erDiagram
+    accounts ||--o{ trial_claims : "user_id"
+    trial_campaigns ||--o{ trial_claims : "campaign_id"
+    trial_claims ||..o{ s1_outbox : "aggregate_id (logical)"
+
+    accounts {
+      uuid user_id PK
+      text email_normalized UK
+      text email_domain_key
+      boolean email_verified
+      text password_hash
+      enum role
+      text status
+      timestamptz created_at
+    }
+
+    trial_campaigns {
+      text campaign_id PK
+      text name
+      int duration_days
+      boolean active
+    }
+
+    trial_claims {
+      uuid claim_id PK
+      uuid user_id FK
+      text campaign_id FK
+      text idempotency_key
+      text request_hash
+      int evaluation_version
+      enum status
+      text assessment_id
+      int risk_score
+      text risk_level
+      text decision
+      jsonb reasons_json
+      boolean monitored
+      enum verification_state
+      int verification_attempts
+      timestamptz verification_expires_at
+      timestamptz verified_at
+      enum risk_check_context
+      timestamptz requested_at
+      timestamptz activated_at
+      timestamptz expires_at
+      timestamptz status_expires_at
+      timestamptz next_retry_at
+      int retry_count
+      int max_attempts
+      text last_error
+      int version
+    }
+
+    s1_outbox {
+      uuid event_id PK
+      text aggregate_id
+      int aggregate_version
+      text event_type
+      jsonb payload_json
+      enum status
+      int retry_count
+      timestamptz next_retry_at
+      text last_error
+      timestamptz created_at
+      timestamptz sent_at
+    }
+        </pre>
+      </div>
+
+      <div class="erd-note">
+        Nếu sơ đồ Mermaid không hiển thị, trình duyệt cần Internet để tải thư viện Mermaid.
+        Bảng quan hệ bên dưới vẫn mô tả đầy đủ.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Quan hệ</th><th>Kiểu</th><th>Ý nghĩa</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>accounts</code> → <code>trial_claims</code></td>
+              <td>1 : N</td>
+              <td>Một account có nhiều claim (khác campaign). Nhưng mỗi campaign tối đa một claim.</td>
+            </tr>
+            <tr>
+              <td><code>trial_campaigns</code> → <code>trial_claims</code></td>
+              <td>1 : N</td>
+              <td>Một campaign có nhiều claim của nhiều user.</td>
+            </tr>
+            <tr>
+              <td><code>trial_claims</code> → <code>s1_outbox</code></td>
+              <td>1 : N (logic)</td>
+              <td>Claim sinh event outbox. Không có FK vì outbox là hạ tầng event.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="enums">
+      <h2>4. Enums</h2>
+      <p class="lead">
+        Enum giúp database từ chối giá trị trạng thái sai. Đây là tuyến phòng thủ thứ hai,
+        ngoài validation ở application.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Enum</th><th>Giá trị</th><th>Dùng ở đâu</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>UserRole</code></td>
+              <td><code>USER</code>, <code>ADMIN</code></td>
+              <td>Phân quyền tài khoản.</td>
+            </tr>
+            <tr>
+              <td><code>ClaimStatus</code></td>
+              <td><code>PENDING_RISK_CHECK</code>, <code>VERIFY_REQUIRED</code>, <code>ACTIVE</code>,
+                <code>REJECTED</code>, <code>EXPIRED</code>, <code>CANCELLED</code></td>
+              <td>Vòng đời trial claim.</td>
+            </tr>
+            <tr>
+              <td><code>VerificationState</code></td>
+              <td><code>NOT_REQUIRED</code>, <code>PENDING</code>, <code>VERIFIED</code>,
+                <code>FAILED</code>, <code>EXPIRED</code></td>
+              <td>Theo dõi OTP độc lập với trạng thái claim.</td>
+            </tr>
+            <tr>
+              <td><code>RiskCheckContext</code></td>
+              <td><code>INITIAL</code>, <code>POST_VERIFY</code></td>
+              <td>Phân biệt đánh giá ban đầu và đánh giá sau OTP.</td>
+            </tr>
+            <tr>
+              <td><code>OutboxStatus</code></td>
+              <td><code>NEW</code>, <code>SENT</code>, <code>FAILED</code></td>
+              <td>Theo dõi publisher.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>Vì sao tách <code>verification_state</code> khỏi <code>status</code>?</strong>
+        Một claim có thể đang <code>VERIFY_REQUIRED</code>, nhưng OTP có trạng thái riêng:
+        chưa gửi, đang chờ, đã xác minh, thất bại, hết hạn. Tách ra giúp debug và tránh nhầm.
+      </div>
+    </section>
+
+    <section id="tables">
+      <h2>5. Các bảng dữ liệu</h2>
+
+      <h3 id="table-accounts">5.1. <code>accounts</code></h3>
+      <p>Lưu tài khoản đăng nhập và thông tin tối thiểu để xác thực.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cột</th><th>Kiểu</th><th>Ràng buộc</th><th>Ý nghĩa</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>user_id</code></td><td>UUID</td><td><span class="badge pk">PK</span></td><td>ID tài khoản.</td></tr>
+            <tr><td><code>email_normalized</code></td><td>TEXT</td><td><span class="badge uk">UNIQUE</span></td><td>Email đã chuẩn hóa; chống trùng tài khoản.</td></tr>
+            <tr><td><code>email_domain_key</code></td><td>TEXT</td><td><span class="badge req">NOT NULL</span></td><td>Key/domain đã hash để S2 dùng cho identity risk, không lưu raw domain ở S2.</td></tr>
+            <tr><td><code>email_verified</code></td><td>BOOLEAN</td><td>default false</td><td>Email đã xác minh chưa.</td></tr>
+            <tr><td><code>password_hash</code></td><td>TEXT</td><td><span class="badge req">NOT NULL</span></td><td>Argon2id hash; không bao giờ lưu plaintext.</td></tr>
+            <tr><td><code>role</code></td><td>UserRole</td><td>default USER</td><td>USER hoặc ADMIN.</td></tr>
+            <tr><td><code>status</code></td><td>TEXT</td><td>default ACTIVE</td><td>Trạng thái tài khoản.</td></tr>
+            <tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>default now()</td><td>Thời điểm đăng ký; dùng cho account age.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout ok">
+        <strong>Vì sao <code>email_normalized</code> unique?</strong>
+        Đây là BR-S1-01: mỗi email chuẩn hóa chỉ có một tài khoản. Chuẩn hóa bao gồm lowercase,
+        bỏ dấu chấm Gmail và phần <code>+tag</code> nếu policy cho phép.
+      </div>
+
+      <h3 id="table-campaigns">5.2. <code>trial_campaigns</code></h3>
+      <p>Danh mục chương trình dùng thử. Đây là dữ liệu cấu hình, ít thay đổi.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cột</th><th>Kiểu</th><th>Ràng buộc</th><th>Ý nghĩa</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>campaign_id</code></td><td>TEXT</td><td><span class="badge pk">PK</span></td><td>Mã campaign, ví dụ <code>PREMIUM_7_DAYS</code>.</td></tr>
+            <tr><td><code>name</code></td><td>TEXT</td><td><span class="badge req">NOT NULL</span></td><td>Tên hiển thị.</td></tr>
+            <tr><td><code>duration_days</code></td><td>INT</td><td><span class="badge req">NOT NULL</span></td><td>Số ngày dùng thử; phải &gt; 0.</td></tr>
+            <tr><td><code>active</code></td><td>BOOLEAN</td><td>default true</td><td>Campaign còn mở không.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <strong>Vì sao dùng <code>TEXT</code> làm PK?</strong>
+        Campaign là dữ liệu cấu hình có mã ổn định, con người đọc được. Không cần UUID.
+      </div>
+
+      <h3 id="table-claims">5.3. <code>trial_claims</code> — bảng quan trọng nhất</h3>
+      <p class="lead">
+        Mỗi dòng là một yêu cầu nhận trial của một user cho một campaign. Đây là nơi chứa
+        trạng thái, snapshot risk, OTP, retry và optimistic lock.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cột</th><th>Kiểu</th><th>Ràng buộc / index</th><th>Ý nghĩa</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>claim_id</code></td><td>UUID</td><td><span class="badge pk">PK</span></td><td>ID claim.</td></tr>
+            <tr><td><code>user_id</code></td><td>UUID</td><td><span class="badge fk">FK accounts</span></td><td>Chủ claim.</td></tr>
+            <tr><td><code>campaign_id</code></td><td>TEXT</td><td><span class="badge fk">FK campaigns</span></td><td>Campaign được claim.</td></tr>
+            <tr><td><code>idempotency_key</code></td><td>TEXT</td><td><span class="badge uk">UNIQUE(user_id, key)</span></td><td>Khóa client gửi để retry an toàn.</td></tr>
+            <tr><td><code>request_hash</code></td><td>TEXT</td><td><span class="badge req">NOT NULL</span></td><td>Hash payload nghiệp vụ ổn định (ví dụ campaignId) để phát hiện key bị dùng lại với payload khác.</td></tr>
+            <tr><td><code>evaluation_version</code></td><td>INT</td><td>default 1</td><td>Phiên bản đánh giá; tăng sau OTP. Dùng làm <code>assessmentKey</code> bên S2.</td></tr>
+            <tr><td><code>status</code></td><td>ClaimStatus</td><td>default PENDING_RISK_CHECK</td><td>Trạng thái hiện tại của claim.</td></tr>
+            <tr><td><code>assessment_id</code></td><td>TEXT</td><td>nullable</td><td>ID assessment bên S2. Tham chiếu logic, không FK.</td></tr>
+            <tr><td><code>risk_score</code></td><td>INT</td><td>nullable</td><td>Snapshot điểm rủi ro tại thời điểm quyết định.</td></tr>
+            <tr><td><code>risk_level</code></td><td>TEXT</td><td>nullable</td><td>LOW / MEDIUM / HIGH.</td></tr>
+            <tr><td><code>decision</code></td><td>TEXT</td><td>nullable</td><td>ALLOW / VERIFY / REJECT.</td></tr>
+            <tr><td><code>reasons_json</code></td><td>JSONB</td><td>default []</td><td>Danh sách reason code để hiển thị/audit.</td></tr>
+            <tr><td><code>monitored</code></td><td>BOOLEAN</td><td>default false</td><td>True nếu MEDIUM đã OTP thành công nhưng vẫn cần theo dõi.</td></tr>
+            <tr><td><code>verification_state</code></td><td>VerificationState</td><td>default NOT_REQUIRED</td><td>Trạng thái OTP: chờ, đã xác minh, thất bại, hết hạn.</td></tr>
+            <tr><td><code>verification_attempts</code></td><td>INT</td><td>default 0</td><td>Số lần thử OTP.</td></tr>
+            <tr><td><code>verification_expires_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Hạn xác minh OTP.</td></tr>
+            <tr><td><code>verified_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Thời điểm xác minh thành công.</td></tr>
+            <tr><td><code>risk_check_context</code></td><td>RiskCheckContext</td><td>default INITIAL</td><td>INITIAL hoặc POST_VERIFY. Worker dùng để không gửi OTP lại.</td></tr>
+            <tr><td><code>requested_at</code></td><td>TIMESTAMPTZ</td><td>default now()</td><td>Thời điểm yêu cầu.</td></tr>
+            <tr><td><code>activated_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Thời điểm trial bắt đầu.</td></tr>
+            <tr><td><code>expires_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Thời điểm trial hết hạn.</td></tr>
+            <tr><td><code>status_expires_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Hạn cho PENDING/VERIFY; job chuyển CANCELLED/EXPIRED.</td></tr>
+            <tr><td><code>next_retry_at</code></td><td>TIMESTAMPTZ</td><td>nullable</td><td>Lần retry tiếp theo của worker.</td></tr>
+            <tr><td><code>retry_count</code></td><td>INT</td><td>default 0</td><td>Số lần đã retry.</td></tr>
+            <tr><td><code>max_attempts</code></td><td>INT</td><td>default 5</td><td>Giới hạn retry.</td></tr>
+            <tr><td><code>last_error</code></td><td>TEXT</td><td>nullable</td><td>Lỗi gần nhất để debug/metrics.</td></tr>
+            <tr><td><code>version</code></td><td>INT</td><td>default 0</td><td>Optimistic locking. Mỗi update tăng 1.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Unique constraints quan trọng</h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Constraint</th><th>Chặn điều gì</th><th>Liên quan business rule</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>UNIQUE(user_id, campaign_id)</code></td>
+              <td>Một user claim hai lần cùng campaign.</td>
+              <td>BR-S1-02, BR-S1-04</td>
+            </tr>
+            <tr>
+              <td><code>UNIQUE(user_id, idempotency_key)</code></td>
+              <td>Cùng user dùng lại key cho request khác.</td>
+              <td>BR-S1-03, BR-S1-04</td>
+            </tr>
+            <tr>
+              <td><code>INDEX(status, next_retry_at)</code></td>
+              <td>Không chặn, nhưng tăng tốc worker quét claim pending.</td>
+              <td>BR-S1-06</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <strong>Vì sao cần cả unique key và request_hash?</strong>
+        Unique key chặn trùng key. Nhưng nếu client gửi cùng key với payload khác, hệ thống phải
+        trả <code>409 IDEMPOTENCY_KEY_REUSED</code>, không được trả claim cũ.
+      </div>
+
+      <h3 id="table-outbox">5.4. <code>s1_outbox</code></h3>
+      <p>Bảng outbox để gửi event sang RabbitMQ mà không mất event khi transaction đã commit.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Cột</th><th>Kiểu</th><th>Ý nghĩa</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>event_id</code></td><td>UUID PK</td><td>ID event; consumer dùng để chống trùng.</td></tr>
+            <tr><td><code>aggregate_id</code></td><td>TEXT</td><td>ID aggregate, ví dụ claim_id hoặc user_id.</td></tr>
+            <tr><td><code>aggregate_version</code></td><td>INT</td><td>Version của aggregate; chống event cũ ghi đè.</td></tr>
+            <tr><td><code>event_type</code></td><td>TEXT</td><td>Ví dụ <code>trial.activated.v1</code>.</td></tr>
+            <tr><td><code>payload_json</code></td><td>JSONB</td><td>Nội dung event; không chứa secret/raw fingerprint.</td></tr>
+            <tr><td><code>status</code></td><td>OutboxStatus</td><td>NEW / SENT / FAILED.</td></tr>
+            <tr><td><code>retry_count</code></td><td>INT</td><td>Số lần publisher đã thử.</td></tr>
+            <tr><td><code>next_retry_at</code></td><td>TIMESTAMPTZ</td><td>Thời điểm retry tiếp theo.</td></tr>
+            <tr><td><code>last_error</code></td><td>TEXT</td><td>Lỗi gần nhất.</td></tr>
+            <tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>Thời điểm tạo event.</td></tr>
+            <tr><td><code>sent_at</code></td><td>TIMESTAMPTZ</td><td>Thời điểm RabbitMQ confirm.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout ok">
+        <strong>Outbox giải quyết gì?</strong>
+        Nếu ghi DB xong rồi publish RabbitMQ lỗi, event sẽ mất. Outbox ghi event cùng transaction DB;
+        publisher đọc bảng và retry đến khi RabbitMQ confirm.
+      </div>
+    </section>
+
+    <section id="state-machine">
+      <h2>6. State machine của TrialClaim</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+stateDiagram-v2
+    [*] --> PENDING_RISK_CHECK: claim
+    PENDING_RISK_CHECK --> ACTIVE: ALLOW
+    PENDING_RISK_CHECK --> VERIFY_REQUIRED: VERIFY
+    PENDING_RISK_CHECK --> REJECTED: REJECT
+    VERIFY_REQUIRED --> PENDING_RISK_CHECK: OTP thành công
+    VERIFY_REQUIRED --> REJECTED: OTP sai hết lượt
+    VERIFY_REQUIRED --> CANCELLED: hết hạn xác minh
+    ACTIVE --> EXPIRED: hết hạn trial
+    REJECTED --> [*]
+    EXPIRED --> [*]
+    CANCELLED --> [*]
+        </pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Từ</th><th>Đến</th><th>Điều kiện</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>[mới]</td><td>PENDING_RISK_CHECK</td><td>Tạo claim</td><td>Chưa cấp trial.</td></tr>
+            <tr><td>PENDING_RISK_CHECK</td><td>ACTIVE</td><td>S2 trả ALLOW</td><td>Ghi <code>activated_at</code>, <code>expires_at</code>; outbox <code>trial.activated</code>.</td></tr>
+            <tr><td>PENDING_RISK_CHECK</td><td>VERIFY_REQUIRED</td><td>S2 trả VERIFY</td><td>Tạo OTP; chưa cấp trial.</td></tr>
+            <tr><td>PENDING_RISK_CHECK</td><td>REJECTED</td><td>S2 trả REJECT</td><td>Soft reject; outbox <code>trial.rejected</code>.</td></tr>
+            <tr><td>VERIFY_REQUIRED</td><td>PENDING_RISK_CHECK</td><td>OTP đúng</td><td><code>evaluation_version += 1</code>, <code>risk_check_context=POST_VERIFY</code>.</td></tr>
+            <tr><td>VERIFY_REQUIRED</td><td>REJECTED</td><td>OTP sai hết lượt</td><td><code>verification_state=FAILED</code>.</td></tr>
+            <tr><td>VERIFY_REQUIRED</td><td>CANCELLED</td><td>Quá hạn xác minh</td><td>Chỉ audit, không tạo case fraud.</td></tr>
+            <tr><td>ACTIVE</td><td>EXPIRED</td><td>Quá <code>expires_at</code></td><td>Job expiry; outbox <code>trial.expired</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <strong>Không có PENDING_REVIEW.</strong>
+        MVP auto 100%: S1 tự áp dụng ALLOW/VERIFY/REJECT. S3 chỉ lưu hồ sơ, không duyệt trial.
+      </div>
+    </section>
+
+    <section id="flows">
+      <h2>7. Luồng nghiệp vụ</h2>
+
+      <h3>7.1. Đăng ký</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-no">1</div><div><h4>Chuẩn hóa email</h4><p>Lowercase, bỏ alias nếu policy cho phép.</p></div></div>
+        <div class="flow-step"><div class="step-no">2</div><div><h4>Hash mật khẩu</h4><p>Argon2id; không lưu plaintext.</p></div></div>
+        <div class="flow-step"><div class="step-no">3</div><div><h4>Insert account</h4><p>Unique <code>email_normalized</code> chặn trùng.</p></div></div>
+        <div class="flow-step"><div class="step-no">4</div><div><h4>Outbox account.registered</h4><p>Cùng transaction với insert account.</p></div></div>
+      </div>
+
+      <h3>7.2. Claim trial</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-no">1</div><div><h4>Validate JWT + campaign</h4><p>Campaign phải active.</p></div></div>
+        <div class="flow-step"><div class="step-no">2</div><div><h4>Tính request_hash</h4><p>Hash payload nghiệp vụ ổn định, ví dụ campaignId.</p></div></div>
+        <div class="flow-step"><div class="step-no">3</div><div><h4>Insert claim + outbox audit</h4><p><code>ON CONFLICT</code> theo unique key.</p></div></div>
+        <div class="flow-step"><div class="step-no">4</div><div><h4>Gọi S2</h4><p>REST, timeout 2s, retry có điều kiện.</p></div></div>
+        <div class="flow-step"><div class="step-no">5</div><div><h4>Áp dụng decision</h4><p>ALLOW → ACTIVE; VERIFY → VERIFY_REQUIRED; REJECT → REJECTED.</p></div></div>
+        <div class="flow-step"><div class="step-no">6</div><div><h4>Outbox event</h4><p><code>trial.activated</code> hoặc <code>trial.rejected</code>.</p></div></div>
+      </div>
+
+      <h3>7.3. OTP verification</h3>
+      <div class="flow">
+        <div class="flow-step"><div class="step-no">1</div><div><h4>Lock claim</h4><p><code>SELECT ... FOR UPDATE</code> hoặc CAS trên status/version.</p></div></div>
+        <div class="flow-step"><div class="step-no">2</div><div><h4>Validate OTP</h4><p>So hash, kiểm tra hạn và số lần thử.</p></div></div>
+        <div class="flow-step"><div class="step-no">3</div><div><h4>Tăng evaluation_version</h4><p>Chỉ một request được tăng.</p></div></div>
+        <div class="flow-step"><div class="step-no">4</div><div><h4>Gọi lại S2</h4><p><code>risk_check_context=POST_VERIFY</code>; không gửi OTP lại.</p></div></div>
+        <div class="flow-step"><div class="step-no">5</div><div><h4>Áp dụng kết quả cuối</h4><p>ALLOW → ACTIVE; VERIFY → ACTIVE + monitored; REJECT → REJECTED.</p></div></div>
+      </div>
+
+      <h3>7.4. S2 lỗi</h3>
+      <p>
+        S1 giữ <code>PENDING_RISK_CHECK</code>, trả <code>202</code>, worker retry theo
+        <code>next_retry_at</code>. Không tự cấp trial. Khi S2 phục hồi, worker áp dụng kết quả
+        nếu <code>evaluation_version</code> và <code>version</code> còn khớp.
+      </p>
+
+      <h3>7.5. Expiry</h3>
+      <p>
+        Job quét <code>ACTIVE</code> có <code>expires_at &lt;= now()</code>, chuyển
+        <code>EXPIRED</code> và ghi outbox <code>trial.expired</code>.
+        Claim <code>VERIFY_REQUIRED</code> quá <code>status_expires_at</code> chuyển <code>CANCELLED</code>.
+      </p>
+    </section>
+
+    <section id="idempotency">
+      <h2>8. Idempotency &amp; concurrency</h2>
+
+      <div class="split">
+        <div>
+          <h3>8.1. Unique key + request hash</h3>
+          <pre><code>-- Giả lập logic
+INSERT INTO trial_claims (...)
+VALUES (...)
+ON CONFLICT (user_id, campaign_id) DO NOTHING
+RETURNING *;
+
+-- Nếu conflict:
+-- - cùng idempotency_key + cùng request_hash  -> trả claim cũ
+-- - cùng user/campaign nhưng key khác         -> 409 TRIAL_ALREADY_CLAIMED
+-- - cùng key nhưng request_hash khác          -> 409 IDEMPOTENCY_KEY_REUSED</code></pre>
+          <p class="small muted">
+            SQL thực tế được Prisma/TypeScript xử lý; đoạn trên chỉ minh họa ý tưởng.
+          </p>
+        </div>
+        <div>
+          <h3>8.2. Optimistic locking</h3>
+          <p>
+            Mỗi update claim phải kèm điều kiện:
+          </p>
+          <pre><code>UPDATE trial_claims
+SET status = $new_status,
+    version = version + 1
+WHERE claim_id = $claim_id
+  AND status = $expected_status
+  AND version = $expected_version;</code></pre>
+          <p>
+            Nếu 0 dòng bị ảnh hưởng, request cũ/đua đã thua; không ghi đè trạng thái mới.
+          </p>
+        </div>
+      </div>
+
+      <h3>8.3. Hai request verify đồng thời</h3>
+      <p>
+        Dùng row lock hoặc compare-and-set trên <code>status = VERIFY_REQUIRED</code> và
+        <code>verification_state = PENDING</code>. Chỉ một request được tăng
+        <code>evaluation_version</code>. Request còn lại trả 409 hoặc trạng thái hiện tại.
+      </p>
+
+      <h3>8.4. Assessment cũ đến muộn</h3>
+      <p>
+        S1 chỉ áp dụng assessment nếu:
+      </p>
+      <ul>
+        <li><code>assessment.evaluationVersion == claim.evaluation_version</code></li>
+        <li><code>claim.status == PENDING_RISK_CHECK</code></li>
+        <li><code>claim.version == expectedVersion</code></li>
+      </ul>
+      <p>
+        Nếu không khớp, bỏ qua và ghi log <code>STALE_ASSESSMENT_IGNORED</code>.
+      </p>
+    </section>
+
+    <section id="indexes">
+      <h2>9. Indexes và lý do</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Index / constraint</th><th>Query được tối ưu</th><th>Vì sao cần</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>accounts.email_normalized UNIQUE</code></td>
+              <td>Tìm account theo email; chặn trùng.</td>
+              <td>Đăng ký/đăng nhập.</td>
+            </tr>
+            <tr>
+              <td><code>trial_claims(user_id, campaign_id) UNIQUE</code></td>
+              <td>Kiểm tra đã claim chưa; chặn claim trùng.</td>
+              <td>BR-S1-02/04.</td>
+            </tr>
+            <tr>
+              <td><code>trial_claims(user_id, idempotency_key) UNIQUE</code></td>
+              <td>Retry cùng key.</td>
+              <td>BR-S1-03.</td>
+            </tr>
+            <tr>
+              <td><code>trial_claims(status, next_retry_at)</code></td>
+              <td>Worker quét claim PENDING đến hạn retry.</td>
+              <td>Tránh full table scan.</td>
+            </tr>
+            <tr>
+              <td><code>s1_outbox(status, next_retry_at)</code></td>
+              <td>Publisher quét event NEW đến hạn gửi.</td>
+              <td>Outbox publisher hiệu quả.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <strong>Lưu ý:</strong> Nếu sau này query nhiều theo <code>campaign_id</code> một mình,
+        có thể thêm index riêng. Hiện tại unique <code>(user_id, campaign_id)</code> đã hỗ trợ
+        query theo <code>user_id</code> (prefix).
+      </div>
+    </section>
+
+    <section id="isolation">
+      <h2>10. Data isolation</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>S1</h3>
+          <p><code>account_trial_db</code> · user <code>account_svc</code></p>
+          <p class="small muted">Account, campaign, claim, outbox.</p>
+        </div>
+        <div class="card">
+          <h3>S2</h3>
+          <p>Neo4j · credential riêng</p>
+          <p class="small muted">Fingerprint, IP, graph, risk assessment.</p>
+        </div>
+        <div class="card">
+          <h3>S3</h3>
+          <p><code>fraud_case_db</code> · user <code>case_svc</code></p>
+          <p class="small muted">Case, cluster, audit, retention.</p>
+        </div>
+      </div>
+
+      <div class="callout danger">
+        <strong>Không có foreign key xuyên database.</strong>
+        <code>trial_claims.assessment_id</code> chỉ là ID tham chiếu sang S2.
+        <code>trial_claims.claim_id</code> được S3 dùng trong event.
+        Không service nào join trực tiếp DB của service khác.
+      </div>
+
+      <details>
+        <summary>Kiểm tra isolation bằng psql</summary>
+        <pre><code># S1 user chỉ vào được DB của S1
+psql -U account_svc -d account_trial_db -c "select current_user;"
+
+# Phải bị từ chối
+psql -U account_svc -d fraud_case_db -c "select 1;"</code></pre>
+        <p>Kết quả mong đợi: <code>permission denied for database "fraud_case_db"</code>.</p>
+      </details>
+    </section>
+
+    <section id="examples">
+      <h2>11. Dữ liệu mẫu</h2>
+
+      <h3>11.1. Account</h3>
+      <pre><code>{
+  "user_id": "8f1b0d4e-...",
+  "email_normalized": "user@example.com",
+  "email_domain_key": "hmac-domain-key",
+  "email_verified": true,
+  "password_hash": "$argon2id$...",
+  "role": "USER",
+  "status": "ACTIVE",
+  "created_at": "2026-11-05T10:00:00Z"
+}</code></pre>
+
+      <h3>11.2. Campaign</h3>
+      <pre><code>{
+  "campaign_id": "PREMIUM_7_DAYS",
+  "name": "Premium 7 ngày",
+  "duration_days": 7,
+  "active": true
+}</code></pre>
+
+      <h3>11.3. Claim LOW → ACTIVE</h3>
+      <pre><code>{
+  "claim_id": "claim_001",
+  "user_id": "user_001",
+  "campaign_id": "PREMIUM_7_DAYS",
+  "idempotency_key": "idem_001",
+  "request_hash": "sha256(campaignId)",
+  "evaluation_version": 1,
+  "status": "ACTIVE",
+  "assessment_id": "ra_001",
+  "risk_score": 12,
+  "risk_level": "LOW",
+  "decision": "ALLOW",
+  "reasons_json": [],
+  "monitored": false,
+  "verification_state": "NOT_REQUIRED",
+  "risk_check_context": "INITIAL",
+  "activated_at": "2026-11-05T10:01:00Z",
+  "expires_at": "2026-11-12T10:01:00Z",
+  "version": 2
+}</code></pre>
+
+      <h3>11.4. Claim HIGH → REJECTED</h3>
+      <pre><code>{
+  "claim_id": "claim_002",
+  "user_id": "user_002",
+  "campaign_id": "PREMIUM_7_DAYS",
+  "idempotency_key": "idem_002",
+  "evaluation_version": 1,
+  "status": "REJECTED",
+  "assessment_id": "ra_002",
+  "risk_score": 72,
+  "risk_level": "HIGH",
+  "decision": "REJECT",
+  "reasons_json": [
+    "DEVICE_SHARED_FP_TRIAL",
+    "VELOCITY_BURST"
+  ],
+  "verification_state": "NOT_REQUIRED",
+  "risk_check_context": "INITIAL",
+  "version": 2
+}</code></pre>
+
+      <h3>11.5. Outbox event</h3>
+      <pre><code>{
+  "event_id": "evt_001",
+  "aggregate_id": "claim_001",
+  "aggregate_version": 2,
+  "event_type": "trial.activated.v1",
+  "payload_json": {
+    "claimId": "claim_001",
+    "userId": "user_001",
+    "campaignId": "PREMIUM_7_DAYS",
+    "riskLevel": "LOW",
+    "decision": "ALLOW"
+  },
+  "status": "NEW",
+  "retry_count": 0,
+  "created_at": "2026-11-05T10:01:00Z"
+}</code></pre>
+    </section>
+
+    <section id="queries">
+      <h2>12. Query thường dùng</h2>
+
+      <h3>12.1. Tìm account theo email</h3>
+      <pre><code>const account = await prisma.account.findUnique({
+  where: { emailNormalized: email },
+});</code></pre>
+
+      <h3>12.2. Tìm claim theo user + campaign</h3>
+      <pre><code>const claim = await prisma.trialClaim.findUnique({
+  where: {
+    userId_campaignId: {
+      userId,
+      campaignId,
+    },
+  },
+});</code></pre>
+
+      <h3>12.3. Worker quét claim PENDING đến hạn retry</h3>
+      <pre><code>const dueClaims = await prisma.trialClaim.findMany({
+  where: {
+    status: "PENDING_RISK_CHECK",
+    nextRetryAt: { lte: new Date() },
+  },
+  orderBy: { nextRetryAt: "asc" },
+  take: 20,
+});</code></pre>
+
+      <h3>12.4. Publisher quét outbox NEW</h3>
+      <pre><code>const events = await prisma.outboxEvent.findMany({
+  where: {
+    status: "NEW",
+    OR: [
+      { nextRetryAt: null },
+      { nextRetryAt: { lte: new Date() } },
+    ],
+  },
+  orderBy: { createdAt: "asc" },
+  take: 20,
+});</code></pre>
+
+      <h3>12.5. Expire trial</h3>
+      <pre><code>UPDATE trial_claims
+SET status = 'EXPIRED',
+    version = version + 1
+WHERE status = 'ACTIVE'
+  AND expires_at &lt;= now();</code></pre>
+    </section>
+
+    <section id="anti-patterns">
+      <h2>13. Điều không nên làm</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Không lưu plaintext password</h3>
+          <p>Chỉ lưu Argon2id hash. Không log mật khẩu.</p>
+        </div>
+        <div class="card">
+          <h3>Không lưu raw fingerprint/IP ở S1</h3>
+          <p>S1 không cần; S2 sở hữu tín hiệu đã HMAC.</p>
+        </div>
+        <div class="card">
+          <h3>Không FK sang S2/S3</h3>
+          <p>Chỉ tham chiếu ID logic. Muốn join thì gọi API/event.</p>
+        </div>
+        <div class="card">
+          <h3>Không update thiếu version</h3>
+          <p>Luôn dùng optimistic lock hoặc row lock để tránh ghi đè.</p>
+        </div>
+        <div class="card">
+          <h3>Không retry mù POST</h3>
+          <p>Chỉ retry khi có idempotency key/assessmentKey.</p>
+        </div>
+        <div class="card">
+          <h3>Không tạo claim mới khi timeout</h3>
+          <p>Client phải GET lại hoặc gửi lại đúng idempotency key.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="qa">
+      <h2>14. Q&amp;A bảo vệ</h2>
+
+      <details>
+        <summary>Vì sao unique <code>(user_id, campaign_id)</code>?</summary>
+        <p>Chặn một user nhận cùng campaign hai lần. Đây là bất biến nghiệp vụ quan trọng nhất của trial.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao cần cả <code>idempotency_key</code> và <code>request_hash</code>?</summary>
+        <p>Key chống tạo trùng khi retry. Hash phân biệt “cùng key, cùng payload” với “cùng key, payload khác”.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao có <code>evaluation_version</code>?</summary>
+        <p>S2 idempotent theo <code>claimId:evaluationVersion</code>. Retry giữ nguyên version; OTP thành công tăng version để tạo assessment mới.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao có <code>version</code>?</summary>
+        <p>Optimistic locking. Hai request đồng thời không thể cùng ghi đè trạng thái.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao có <code>status_expires_at</code>?</summary>
+        <p>Claim PENDING/VERIFY không được treo mãi. Job chuyển CANCELLED/EXPIRED theo hạn.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao có <code>next_retry_at</code>, <code>retry_count</code>, <code>last_error</code>?</summary>
+        <p>Worker retry có backoff, giới hạn, và có dữ liệu để debug/metrics. Không retry vô hạn.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao snapshot <code>risk_score</code>/<code>risk_level</code>/<code>reasons_json</code>?</summary>
+        <p>S1 cần hiển thị trạng thái và lý do mà không gọi S2 mỗi lần. Đồng thời lưu bằng chứng tại thời điểm quyết định.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao outbox thay vì publish trực tiếp?</summary>
+        <p>Ghi DB và publish RabbitMQ không thể atomic. Outbox ghi event cùng transaction, publisher gửi sau và retry.</p>
+      </details>
+
+      <details>
+        <summary>Vì sao không có FK sang S2/S3?</summary>
+        <p>Mỗi service sở hữu DB riêng. FK xuyên DB phá vỡ autonomy và không thể enforce khi DB tách vật lý.</p>
+      </details>
+
+      <details>
+        <summary>Nếu hai request claim cùng lúc thì sao?</summary>
+        <p>Unique <code>(user_id, campaign_id)</code> đảm bảo chỉ một insert thắng. Request còn lại đọc claim hiện tại và trả 409/claim cũ theo key.</p>
+      </details>
+
+      <details>
+        <summary>Nếu OTP verify hai lần đồng thời?</summary>
+        <p>Row lock/CAS đảm bảo chỉ một lần tăng <code>evaluation_version</code>. Request còn lại trả 409 hoặc trạng thái hiện tại.</p>
+      </details>
+
+      <details>
+        <summary>Nếu S2 trả kết quả cũ đến muộn?</summary>
+        <p>So <code>evaluation_version</code>, <code>status</code>, <code>version</code>. Không khớp thì bỏ qua, ghi log.</p>
+      </details>
+    </section>
+
+    <section id="rubric">
+      <h2>15. Đối chiếu rubric</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Yêu cầu</th><th>S1 đáp ứng</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Dữ liệu riêng từng service</td><td><code>account_trial_db</code>, user <code>account_svc</code>; không shared DB.</td></tr>
+            <tr><td>≥5 business rules</td><td>BR-S1-01 đến BR-S1-12.</td></tr>
+            <tr><td>REST API + OpenAPI</td><td>Auth, users, campaigns, claims, verifications, admin stats.</td></tr>
+            <tr><td>Luồng nhiều bước + PENDING</td><td>Claim → S2 → ACTIVE/VERIFY/REJECT; PENDING khi S2 lỗi.</td></tr>
+            <tr><td>Độ tin cậy</td><td>Unique constraint, idempotency, optimistic lock, outbox, retry metadata.</td></tr>
+            <tr><td>Kiểm thử</td><td>Unit test health; integration/e2e sẽ thêm ở M2.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="appendix">
+      <h2>Phụ lục — Prisma schema</h2>
+      <p class="lead">
+        Schema thực tế đang dùng. Chạy <code>npm run prisma:push</code> để đồng bộ database.
+      </p>
+      <details open>
+        <summary>Xem schema.prisma</summary>
+        <pre><code>generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ACCOUNT_DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ClaimStatus {
+  PENDING_RISK_CHECK
+  VERIFY_REQUIRED
+  ACTIVE
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum VerificationState {
+  NOT_REQUIRED
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+}
+
+enum RiskCheckContext {
+  INITIAL
+  POST_VERIFY
+}
+
+enum OutboxStatus {
+  NEW
+  SENT
+  FAILED
+}
+
+model Account {
+  userId           String       @id @default(uuid()) @map("user_id") @db.Uuid
+  emailNormalized  String       @unique @map("email_normalized")
+  emailDomainKey   String       @map("email_domain_key")
+  emailVerified    Boolean      @default(false) @map("email_verified")
+  passwordHash     String       @map("password_hash")
+  role             UserRole     @default(USER)
+  status           String       @default("ACTIVE")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  claims           TrialClaim[]
+
+  @@map("accounts")
+}
+
+model TrialCampaign {
+  campaignId    String       @id @map("campaign_id")
+  name          String
+  durationDays  Int          @map("duration_days")
+  active        Boolean      @default(true)
+  claims        TrialClaim[]
+
+  @@map("trial_campaigns")
+}
+
+model TrialClaim {
+  claimId                 String              @id @default(uuid()) @map("claim_id") @db.Uuid
+  userId                  String              @map("user_id") @db.Uuid
+  campaignId              String              @map("campaign_id")
+  idempotencyKey          String              @map("idempotency_key")
+  requestHash             String              @map("request_hash")
+  evaluationVersion       Int                 @default(1) @map("evaluation_version")
+  status                  ClaimStatus         @default(PENDING_RISK_CHECK)
+  assessmentId            String?             @map("assessment_id")
+  riskScore               Int?                @map("risk_score")
+  riskLevel               String?             @map("risk_level")
+  decision                String?
+  reasonsJson             Json                @default("[]") @map("reasons_json")
+  monitored               Boolean             @default(false)
+  verificationState       VerificationState   @default(NOT_REQUIRED) @map("verification_state")
+  verificationAttempts    Int                 @default(0) @map("verification_attempts")
+  verificationExpiresAt   DateTime?           @map("verification_expires_at") @db.Timestamptz(6)
+  verifiedAt              DateTime?           @map("verified_at") @db.Timestamptz(6)
+  riskCheckContext        RiskCheckContext    @default(INITIAL) @map("risk_check_context")
+  requestedAt             DateTime            @default(now()) @map("requested_at") @db.Timestamptz(6)
+  activatedAt             DateTime?           @map("activated_at") @db.Timestamptz(6)
+  expiresAt               DateTime?           @map("expires_at") @db.Timestamptz(6)
+  statusExpiresAt         DateTime?           @map("status_expires_at") @db.Timestamptz(6)
+  nextRetryAt             DateTime?           @map("next_retry_at") @db.Timestamptz(6)
+  retryCount              Int                 @default(0) @map("retry_count")
+  maxAttempts             Int                 @default(5) @map("max_attempts")
+  lastError               String?             @map("last_error")
+  version                 Int                 @default(0)
+  user                    Account             @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  campaign                TrialCampaign       @relation(fields: [campaignId], references: [campaignId], onDelete: Restrict)
+
+  @@unique([userId, campaignId])
+  @@unique([userId, idempotencyKey])
+  @@index([status, nextRetryAt])
+  @@map("trial_claims")
+}
+
+model OutboxEvent {
+  eventId           String        @id @default(uuid()) @map("event_id") @db.Uuid
+  aggregateId       String        @map("aggregate_id")
+  aggregateVersion  Int           @map("aggregate_version")
+  eventType         String        @map("event_type")
+  payloadJson       Json          @map("payload_json")
+  status            OutboxStatus  @default(NEW)
+  retryCount        Int           @default(0) @map("retry_count")
+  nextRetryAt       DateTime?     @map("next_retry_at") @db.Timestamptz(6)
+  lastError         String?       @map("last_error")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt            DateTime?     @map("sent_at") @db.Timestamptz(6)
+
+  @@index([status, nextRetryAt])
+  @@map("s1_outbox")
+}</code></pre>
+      </details>
+    </section>
+
+    <div class="footer">
+      <p>
+        File này được tạo cho mục đích học tập và bảo vệ đồ án.
+        Schema là nguồn chính; nếu code thay đổi, cập nhật lại tài liệu này.
+      </p>
+      <p>
+        Đường dẫn: <code>docs/s1-database-design.html</code> ·
+        Dự án: Multi-Account Fraud Detection Platform.
+      </p>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+      primaryColor: "#e8efff",
+      primaryTextColor: "#172033",
+      primaryBorderColor: "#1f5eff",
+      lineColor: "#5b677a",
+      secondaryColor: "#f2eafb",
+      tertiaryColor: "#f8fafc"
+    },
+    er: { useMaxWidth: true },
+    state: { useMaxWidth: true }
+  });
+</script>
+</body>
+</html>
