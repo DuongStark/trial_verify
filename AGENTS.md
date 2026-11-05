@@ -73,9 +73,15 @@ Mỗi bước nên có:
   - `docker-compose.yml` chạy 3 service + PostgreSQL + Neo4j + RabbitMQ.
   - NGINX gateway tại `localhost:8080`; 3001–3003 chỉ nội bộ.
   - Đã kiểm tra health qua gateway, DB isolation, Neo4j, RabbitMQ.
-- **Bước tiếp theo — M2**:
-  - Bắt đầu nghiệp vụ S1: AuthModule, AccountsModule, TrialsModule.
-  - Register/login/JWT, campaign, claim với risk đơn giản.
+- **M2.1 xong**:
+  - Prisma schema: accounts, trial_campaigns, trial_claims, s1_outbox.
+  - PrismaModule + PrismaService đã nối vào AppModule.
+  - Đã tạo bảng trong PostgreSQL bằng `prisma db push`.
+  - Service vẫn health OK; chưa có API nghiệp vụ.
+- **Bước tiếp theo — M2.2**:
+  - Seed campaign `PREMIUM_7_DAYS`.
+  - Tạo AuthModule: register/login/JWT.
+  - Test register/login qua HTTP.
   - Làm từng bước nhỏ, test sau mỗi bước.
 
 ## 7. Quy ước kỹ thuật

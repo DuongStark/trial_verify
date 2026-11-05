@@ -17,7 +17,10 @@ Hệ thống phát hiện lạm dụng trial đa tài khoản bằng browser fin
   - [x] Kiểm tra DB isolation, Neo4j, RabbitMQ health  
   - [x] NGINX gateway tại `localhost:8080`  
   - [x] Chỉ gateway mở port public; 3001–3003 là nội bộ
-- [ ] M2 — S1 Account & Trial
+- [ ] M2 — S1 Account & Trial  
+  - [x] Prisma schema cho accounts, campaigns, claims, outbox  
+  - [x] PrismaModule + PrismaService  
+  - [x] Đã tạo bảng trong PostgreSQL và kiểm tra kết nối
 - [ ] M3 — S2 Graph & Risk tối giản
 - [ ] M4 — Auto policy + OTP
 - [ ] M5 — RabbitMQ + S3 Case

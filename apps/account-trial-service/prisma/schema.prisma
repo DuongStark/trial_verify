@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ACCOUNT_DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ClaimStatus {
+  PENDING_RISK_CHECK
+  VERIFY_REQUIRED
+  ACTIVE
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum VerificationState {
+  NOT_REQUIRED
+  PENDING
+  VERIFIED
+  FAILED
+  EXPIRED
+}
+
+enum RiskCheckContext {
+  INITIAL
+  POST_VERIFY
+}
+
+enum OutboxStatus {
+  NEW
+  SENT
+  FAILED
+}
+
+model Account {
+  userId           String       @id @default(uuid()) @map("user_id") @db.Uuid
+  emailNormalized  String       @unique @map("email_normalized")
+  emailDomainKey   String       @map("email_domain_key")
+  emailVerified    Boolean      @default(false) @map("email_verified")
+  passwordHash     String       @map("password_hash")
+  role             UserRole     @default(USER)
+  status           String       @default("ACTIVE")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  claims           TrialClaim[]
+
+  @@map("accounts")
+}
+
+model TrialCampaign {
+  campaignId    String       @id @map("campaign_id")
+  name          String
+  durationDays  Int          @map("duration_days")
+  active        Boolean      @default(true)
+  claims        TrialClaim[]
+
+  @@map("trial_campaigns")
+}
+
+model TrialClaim {
+  claimId                 String              @id @default(uuid()) @map("claim_id") @db.Uuid
+  userId                  String              @map("user_id") @db.Uuid
+  campaignId              String              @map("campaign_id")
+  idempotencyKey          String              @map("idempotency_key")
+  requestHash             String              @map("request_hash")
+  evaluationVersion       Int                 @default(1) @map("evaluation_version")
+  status                  ClaimStatus         @default(PENDING_RISK_CHECK)
+  assessmentId            String?             @map("assessment_id")
+  riskScore               Int?                @map("risk_score")
+  riskLevel               String?             @map("risk_level")
+  decision                String?
+  reasonsJson             Json                @default("[]") @map("reasons_json")
+  monitored               Boolean             @default(false)
+  verificationState       VerificationState   @default(NOT_REQUIRED) @map("verification_state")
+  verificationAttempts    Int                 @default(0) @map("verification_attempts")
+  verificationExpiresAt   DateTime?           @map("verification_expires_at") @db.Timestamptz(6)
+  verifiedAt              DateTime?           @map("verified_at") @db.Timestamptz(6)
+  riskCheckContext        RiskCheckContext    @default(INITIAL) @map("risk_check_context")
+  requestedAt             DateTime            @default(now()) @map("requested_at") @db.Timestamptz(6)
+  activatedAt             DateTime?           @map("activated_at") @db.Timestamptz(6)
+  expiresAt               DateTime?           @map("expires_at") @db.Timestamptz(6)
+  statusExpiresAt         DateTime?           @map("status_expires_at") @db.Timestamptz(6)
+  nextRetryAt             DateTime?           @map("next_retry_at") @db.Timestamptz(6)
+  retryCount              Int                 @default(0) @map("retry_count")
+  maxAttempts             Int                 @default(5) @map("max_attempts")
+  lastError               String?             @map("last_error")
+  version                 Int                 @default(0)
+  user                    Account             @relation(fields: [userId], references: [userId], onDelete: Restrict)
+  campaign                TrialCampaign       @relation(fields: [campaignId], references: [campaignId], onDelete: Restrict)
+
+  @@unique([userId, campaignId])
+  @@unique([userId, idempotencyKey])
+  @@index([status, nextRetryAt])
+  @@map("trial_claims")
+}
+
+model OutboxEvent {
+  eventId           String        @id @default(uuid()) @map("event_id") @db.Uuid
+  aggregateId       String        @map("aggregate_id")
+  aggregateVersion  Int           @map("aggregate_version")
+  eventType         String        @map("event_type")
+  payloadJson       Json          @map("payload_json")
+  status            OutboxStatus  @default(NEW)
+  retryCount        Int           @default(0) @map("retry_count")
+  nextRetryAt       DateTime?     @map("next_retry_at") @db.Timestamptz(6)
+  lastError         String?       @map("last_error")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt            DateTime?     @map("sent_at") @db.Timestamptz(6)
+
+  @@index([status, nextRetryAt])
+  @@map("s1_outbox")
+}
