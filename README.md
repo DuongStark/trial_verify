@@ -85,7 +85,7 @@ docker compose up --build
 - `Thiet_ke_he_thong_phat_hien_gian_lan_da_tai_khoan_v4_auto100.md` — bản chốt v4.1 (đã sửa theo rà soát)
 - `S3_Case_Investigation_Service.md` — đặc tả S3
 - `M0_CHECKLIST.md` — checklist môi trường
-- `docs/s1-database-design.html` — tài liệu HTML thiết kế database S1
+- `explanations/s1-database-design.html` — tài liệu HTML thiết kế database S1
 
 ## Ghi chú
 

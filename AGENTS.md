@@ -89,6 +89,9 @@ Mỗi bước nên có:
 - Node 24 LTS, npm.
 - Dùng **Docker Engine**, không dùng Docker Desktop.
 - Repo root: thư mục `sercure/`.
+- Tài liệu giải thích do người dùng yêu cầu tạo (HTML/MD) đặt trong `explanations/`.
+  - Không đặt code, Dockerfile, migration hay config vào đây.
+  - Cập nhật `explanations/README.md` khi thêm file mới.
 - Apps:
   - `apps/account-trial-service`
   - `apps/graph-risk-service`
