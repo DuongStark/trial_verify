@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Đăng nhập &amp; JWT — S1 Account &amp; Trial</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #21262d;
+    --border: #30363d;
+    --border-soft: #21262d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --yellow: #d29922;
+    --purple: #bc8cff;
+    --orange: #ffa657;
+    --radius: 6px;
+    --max: 1012px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(13, 17, 23, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  .crumb { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  .crumb strong { color: var(--text); font-weight: 600; }
+  .crumb .sep { color: #484f58; }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .label.blue { color: var(--blue); border-color: rgba(88,166,255,.4); background: rgba(56,139,253,.1); }
+  .label.green { color: var(--green); border-color: rgba(63,185,80,.4); background: rgba(63,185,80,.1); }
+  .label.red { color: var(--red); border-color: rgba(248,81,73,.4); background: rgba(248,81,73,.1); }
+  .label.yellow { color: var(--yellow); border-color: rgba(210,153,34,.4); background: rgba(210,153,34,.1); }
+
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 40px 24px 90px; }
+
+  .hero { padding: 18px 0 26px; }
+
+  .eyebrow {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 10px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: clamp(2rem, 4.4vw, 3rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  .hero p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 1.1rem;
+    max-width: 760px;
+  }
+
+  .labels { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  section { padding: 26px 0; border-top: 1px solid var(--border); }
+
+  h2 {
+    margin: 0 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 1.55rem;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  h3 { margin: 26px 0 10px; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  li { margin: 5px 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: rgba(110,118,129,.18);
+    border-radius: 4px;
+    padding: 2px 5px;
+  }
+
+  /* GitHub-style alerts */
+  .alert {
+    border-left: 4px solid var(--blue);
+    background: rgba(56,139,253,.1);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+  }
+
+  .alert .head { font-weight: 600; color: var(--blue); margin-bottom: 4px; }
+  .alert p:last-child { margin-bottom: 0; }
+  .alert.tip { border-color: var(--green); background: rgba(63,185,80,.08); }
+  .alert.tip .head { color: var(--green); }
+  .alert.warn { border-color: var(--yellow); background: rgba(210,153,34,.08); }
+  .alert.warn .head { color: var(--yellow); }
+  .alert.danger { border-color: var(--red); background: rgba(248,81,73,.08); }
+  .alert.danger .head { color: var(--red); }
+
+  /* JWT parts */
+  .jwt-parts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+
+  .jwt-part {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  .jwt-part .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+
+  .jwt-part:nth-child(1) .tag { color: #ff7b72; background: rgba(255,123,114,.12); }
+  .jwt-part:nth-child(2) .tag { color: var(--purple); background: rgba(188,140,255,.12); }
+  .jwt-part:nth-child(3) .tag { color: var(--blue); background: rgba(88,166,255,.12); }
+
+  .jwt-part h4 { margin: 0 0 6px; font-size: 0.95rem; }
+  .jwt-part p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+  /* Commit timeline */
+  .timeline {
+    list-style: none;
+    margin: 18px 0 8px;
+    padding: 0 0 0 18px;
+    position: relative;
+  }
+
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .timeline li {
+    position: relative;
+    margin: 0 0 20px;
+    padding-left: 8px;
+  }
+
+  .timeline li::before {
+    content: "";
+    position: absolute;
+    left: -18px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--blue);
+  }
+
+  .timeline li.fail::before { border-color: var(--red); }
+  .timeline li.ok::before { border-color: var(--green); }
+  .timeline strong { display: block; font-weight: 600; }
+  .timeline span { color: var(--muted); font-size: 0.9rem; }
+
+  /* File table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(110,118,129,.06); }
+
+  /* Code block giống GitHub file viewer */
+  .file {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 14px 0 22px;
+    background: #010409;
+  }
+
+  .file-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .file-head .name { color: var(--text); }
+  .file-head .tag { color: var(--muted); font-size: 11px; }
+
+  pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.65;
+    tab-size: 2;
+    color: #e6edf3;
+  }
+
+  .c { color: #8b949e; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .f { color: #d2a8ff; }
+  .n { color: #79c0ff; }
+
+  /* Prompt/terminal */
+  .terminal {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #010409;
+    margin: 14px 0 22px;
+    overflow: hidden;
+  }
+
+  .terminal-head {
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .terminal pre { padding: 14px 16px; }
+  .prompt { color: var(--green); }
+
+  /* Q&A */
+  details {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--panel);
+    padding: 12px 16px;
+    margin: 8px 0;
+  }
+
+  summary { cursor: pointer; font-weight: 600; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--muted); margin-right: 8px; display: inline-block; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details p { margin: 10px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+  .next {
+    border: 1px solid rgba(88,166,255,.4);
+    background: rgba(56,139,253,.08);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-top: 18px;
+  }
+
+  .next h2 { border: none; padding: 0; margin: 0 0 10px; font-size: 1.3rem; }
+  .next p { margin: 0 0 8px; color: var(--muted); }
+  .next p:last-child { margin-bottom: 0; }
+
+  .footer {
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 720px) {
+    .jwt-parts { grid-template-columns: 1fr; }
+    .wrap { padding: 24px 16px 60px; }
+    .topbar-inner { padding: 10px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="crumb">
+      <strong>S1</strong>
+      <span class="sep">/</span>
+      <span>auth</span>
+      <span class="sep">/</span>
+      <span>login</span>
+    </div>
+    <div class="topbar-right">
+      <span class="label green">7 tests passing</span>
+      <span class="label">06/11/2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">POST /api/auth/login</span>
+    <h1>Đăng nhập &amp; cấp JWT</h1>
+    <p>Kiểm tra mật khẩu bằng bcrypt, ký token bằng HMAC-SHA256, trả về <code>accessToken</code> để client dùng cho các request sau.</p>
+    <div class="labels">
+      <span class="label blue">200 OK</span>
+      <span class="label red">401 INVALID_CREDENTIALS</span>
+      <span class="label">@nestjs/jwt</span>
+      <span class="label">bcrypt</span>
+      <span class="label yellow">chưa có guard</span>
+    </div>
+  </header>
+
+  <div class="alert">
+    <div class="head">Tóm tắt</div>
+    <p>Thêm <code>POST /api/auth/login</code>: tìm tài khoản theo email đã chuẩn hóa, so sánh mật khẩu bằng <code>bcrypt.compare</code>, rồi ký JWT chứa <code>sub</code> (userId) và <code>role</code>. Sai email hoặc sai mật khẩu đều trả cùng một lỗi 401 để tránh dò email tồn tại. Token sống 1 giờ.</p>
+  </div>
+
+  <section>
+    <h2>JWT là gì?</h2>
+    <p>JWT (JSON Web Token) giống một <strong>tấm vé có chữ ký</strong>. Server phát vé sau khi kiểm tra mật khẩu đúng. Vé ghi bạn là ai và có quyền gì; chữ ký đảm bảo không ai sửa được nội dung.</p>
+
+    <div class="jwt-parts">
+      <div class="jwt-part">
+        <span class="tag">header</span>
+        <h4>Thuật toán</h4>
+        <p>Ví dụ <code>{"alg":"HS256","typ":"JWT"}</code> — cho biết token được ký bằng HMAC-SHA256.</p>
+      </div>
+      <div class="jwt-part">
+        <span class="tag">payload</span>
+        <h4>Dữ liệu</h4>
+        <p>Chứa <code>sub</code>, <code>role</code>, <code>iat</code>, <code>exp</code>. Ai cũng đọc được, nên không đặt mật khẩu hay dữ liệu nhạy cảm.</p>
+      </div>
+      <div class="jwt-part">
+        <span class="tag">signature</span>
+        <h4>Chữ ký</h4>
+        <p>HMAC của header + payload với <code>JWT_SECRET</code>. Sửa payload là chữ ký sai, server từ chối.</p>
+      </div>
+    </div>
+
+    <div class="alert warn">
+      <div class="head">Hiểu nhầm thường gặp</div>
+      <p>JWT <strong>không mã hóa</strong> nội dung, chỉ <strong>ký</strong>. Bất kỳ ai có token đều decode được payload. Vì vậy tuyệt đối không đặt mật khẩu, số CCCD hay secret vào payload.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Một lần đăng nhập đi qua đâu?</h2>
+    <ul class="timeline">
+      <li>
+        <strong>1. Client gửi email + password</strong>
+        <span>POST <code>/api/auth/login</code> qua NGINX :8080</span>
+      </li>
+      <li>
+        <strong>2. ValidationPipe kiểm tra LoginDto</strong>
+        <span>email đúng định dạng, password không rỗng, tối đa 72 ký tự</span>
+      </li>
+      <li>
+        <strong>3. AuthService chuẩn hóa email</strong>
+        <span><code>trim().toLowerCase()</code> để khớp với dữ liệu lúc đăng ký</span>
+      </li>
+      <li>
+        <strong>4. Prisma tìm tài khoản</strong>
+        <span><code>findUnique({ where: { emailNormalized } })</code>, chỉ lấy userId, passwordHash, role</span>
+      </li>
+      <li class="fail">
+        <strong>5. bcrypt.compare kiểm tra mật khẩu</strong>
+        <span>sai hoặc không có tài khoản → 401 <code>INVALID_CREDENTIALS</code></span>
+      </li>
+      <li class="ok">
+        <strong>6. Ký JWT và trả về</strong>
+        <span><code>signAsync({ sub, role })</code> → 200 + <code>accessToken</code>, <code>tokenType</code>, <code>expiresIn</code></span>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Những file đã thay đổi</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Loại</th><th>Nội dung</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/auth/dto/login.dto.ts</code></td>
+            <td><span class="label green">mới</span></td>
+            <td>Validate email và mật khẩu cho login (không áp policy mạnh như register).</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.constants.ts</code></td>
+            <td><span class="label green">mới</span></td>
+            <td>Gom <code>BCRYPT_ROUNDS = 12</code> và <code>JWT_EXPIRES_IN_SECONDS = 3600</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.service.ts</code></td>
+            <td><span class="label yellow">sửa</span></td>
+            <td>Thêm <code>login()</code>: tìm account, compare, ký token, trả 401 thống nhất.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.controller.ts</code></td>
+            <td><span class="label yellow">sửa</span></td>
+            <td>Thêm route <code>POST login</code> với <code>@HttpCode(200)</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.module.ts</code></td>
+            <td><span class="label yellow">sửa</span></td>
+            <td>Cấu hình <code>JwtModule</code>, đọc <code>JWT_SECRET</code> và fail fast nếu thiếu.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.service.spec.ts</code></td>
+            <td><span class="label yellow">sửa</span></td>
+            <td>Thêm 3 test: login đúng, sai mật khẩu, email không tồn tại.</td>
+          </tr>
+          <tr>
+            <td><code>package.json</code></td>
+            <td><span class="label yellow">sửa</span></td>
+            <td>Thêm dependency <code>@nestjs/jwt</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Code chính</h2>
+
+    <h3>DTO — chỉ cần đúng hình dạng</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">src/auth/dto/login.dto.ts</span><span class="tag">TypeScript</span></div>
+<pre><span class="k">export class</span> <span class="f">LoginDto</span> {
+  @<span class="f">IsEmail</span>({}, { message: <span class="s">'Email không hợp lệ'</span> })
+  @<span class="f">MaxLength</span>(<span class="n">254</span>, { message: <span class="s">'Email quá dài'</span> })
+  email!: <span class="k">string</span>;
+
+  <span class="c">// Login không áp policy mạnh như register: chỉ cần khớp mật khẩu đã lưu.</span>
+  @<span class="f">IsString</span>()
+  @<span class="f">MinLength</span>(<span class="n">1</span>, { message: <span class="s">'Mật khẩu không được để trống'</span> })
+  @<span class="f">MaxLength</span>(<span class="n">72</span>, { message: <span class="s">'Mật khẩu không được quá 72 ký tự'</span> })
+  password!: <span class="k">string</span>;
+}</pre>
+    </div>
+
+    <h3>Service — nơi quyết định đúng/sai</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">src/auth/auth.service.ts</span><span class="tag">TypeScript</span></div>
+<pre><span class="k">async</span> <span class="f">login</span>(dto: LoginDto): Promise&lt;LoginResult&gt; {
+  <span class="k">const</span> emailNormalized = dto.email.<span class="f">trim</span>().<span class="f">toLowerCase</span>();
+
+  <span class="k">const</span> account = <span class="k">await</span> <span class="k">this</span>.prisma.account.<span class="f">findUnique</span>({
+    where: { emailNormalized },
+    select: { userId: <span class="k">true</span>, passwordHash: <span class="k">true</span>, role: <span class="k">true</span> },
+  });
+
+  <span class="k">const</span> passwordMatches = account
+    ? <span class="k">await</span> <span class="f">compare</span>(dto.password, account.passwordHash)
+    : <span class="k">false</span>;
+
+  <span class="c">// Cùng một thông báo cho "email không tồn tại" và "sai mật khẩu":</span>
+  <span class="c">// tránh để kẻ tấn công dò xem email nào đã đăng ký.</span>
+  <span class="k">if</span> (!account || !passwordMatches) {
+    <span class="k">throw new</span> <span class="f">UnauthorizedException</span>({
+      code: <span class="s">'INVALID_CREDENTIALS'</span>,
+      message: <span class="s">'Email hoặc mật khẩu không đúng'</span>,
+    });
+  }
+
+  <span class="k">const</span> accessToken = <span class="k">await</span> <span class="k">this</span>.jwtService.<span class="f">signAsync</span>({
+    sub: account.userId,
+    role: account.role,
+  });
+
+  <span class="k">return</span> {
+    accessToken,
+    tokenType: <span class="s">'Bearer'</span>,
+    expiresIn: JWT_EXPIRES_IN_SECONDS,
+  };
+}</pre>
+    </div>
+
+    <div class="alert tip">
+      <div class="head">Vì sao chỉ lấy 3 cột?</div>
+      <p><code>select</code> giới hạn dữ liệu trả về từ DB. Không lấy <code>emailNormalized</code> hay các cột thừa giúp giảm nguy cơ vô tình trả nhầm dữ liệu ra response và giảm tải I/O.</p>
+    </div>
+
+    <h3>Module — cấu hình JWT một lần</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">src/auth/auth.module.ts</span><span class="tag">TypeScript</span></div>
+<pre><span class="f">JwtModule</span>.<span class="f">registerAsync</span>({
+  useFactory: () =&gt; {
+    <span class="k">const</span> secret = process.env.JWT_SECRET;
+
+    <span class="k">if</span> (!secret) {
+      <span class="c">// Fail fast khi khởi động thay vì để login lỗi mơ hồ lúc chạy.</span>
+      <span class="k">throw new</span> <span class="f">Error</span>(<span class="s">'JWT_SECRET chưa được cấu hình'</span>);
+    }
+
+    <span class="k">return</span> {
+      secret,
+      signOptions: { expiresIn: JWT_EXPIRES_IN_SECONDS },
+    };
+  },
+}),</pre>
+    </div>
+
+    <h3>Controller — chỉ thêm một route</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">src/auth/auth.controller.ts</span><span class="tag">TypeScript</span></div>
+<pre>@<span class="f">Post</span>(<span class="s">'login'</span>)
+@<span class="f">HttpCode</span>(HttpStatus.OK)
+<span class="f">login</span>(@<span class="f">Body</span>() dto: LoginDto): Promise&lt;LoginResult&gt; {
+  <span class="k">return</span> <span class="k">this</span>.authService.<span class="f">login</span>(dto);
+}</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kết quả chạy thật</h2>
+
+    <h3>Đăng nhập đúng — 200</h3>
+    <div class="terminal">
+      <div class="terminal-head">curl</div>
+<pre><span class="prompt">$</span> curl -X POST http://localhost:8080/api/auth/login \
+    -H <span class="s">'Content-Type: application/json'</span> \
+    -d <span class="s">'{"email":"Alice@Example.com","password":"mat-khau-123"}'</span></pre>
+    </div>
+
+<div class="file">
+  <div class="file-head"><span class="name">200 OK</span><span class="tag">JSON</span></div>
+<pre>{
+  <span class="s">"accessToken"</span>: <span class="s">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi..."</span>,
+  <span class="s">"tokenType"</span>: <span class="s">"Bearer"</span>,
+  <span class="s">"expiresIn"</span>: <span class="n">3600</span>
+}</pre>
+</div>
+
+    <h3>Payload bên trong token</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">decoded payload</span><span class="tag">JSON</span></div>
+<pre>{
+  <span class="s">"sub"</span>: <span class="s">"3d829d22-ccf2-45a7-b8f7-45af44f26b63"</span>,
+  <span class="s">"role"</span>: <span class="s">"USER"</span>,
+  <span class="s">"iat"</span>: <span class="n">1793957435</span>,
+  <span class="s">"exp"</span>: <span class="n">1793961035</span>
+}</pre>
+    </div>
+
+    <p><code>exp - iat = 3600</code> giây, đúng bằng 1 giờ. <code>sub</code> là viết tắt chuẩn JWT của “subject” — ở đây chính là <code>userId</code>.</p>
+
+    <h3>Sai mật khẩu — 401</h3>
+    <div class="file">
+      <div class="file-head"><span class="name">401 Unauthorized</span><span class="tag">JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"INVALID_CREDENTIALS"</span>,
+  <span class="s">"message"</span>: <span class="s">"Email hoặc mật khẩu không đúng"</span>
+}</pre>
+    </div>
+
+    <h3>Email không tồn tại — cũng 401, cùng body</h3>
+    <p>Đây là chủ ý: nếu trả “email không tồn tại”, kẻ tấn công có thể dò danh sách email đã đăng ký. Cùng một thông báo thì không phân biệt được.</p>
+
+    <div class="alert">
+      <div class="head">Kiểm tra unit test</div>
+      <p><code>npm test</code> → 3 file, <strong>7 test pass</strong>. Trong đó 3 test mới cho login: đúng, sai mật khẩu, email không tồn tại.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Các quyết định bảo mật</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Quyết định</th><th>Lý do</th><th>Đánh đổi</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cùng lỗi 401 cho mọi trường hợp</td>
+            <td>Chống dò email đã đăng ký (user enumeration)</td>
+            <td>Người dùng thật khó biết mình gõ sai email hay sai mật khẩu</td>
+          </tr>
+          <tr>
+            <td>Token sống 1 giờ</td>
+            <td>Giảm thiệt hại nếu token bị lộ</td>
+            <td>Hết hạn phải đăng nhập lại; production cần refresh token</td>
+          </tr>
+          <tr>
+            <td>Không lưu token trong DB</td>
+            <td>JWT stateless, verify bằng chữ ký</td>
+            <td>Không thu hồi token ngay được (cần blacklist)</td>
+          </tr>
+          <tr>
+            <td>Fail fast nếu thiếu <code>JWT_SECRET</code></td>
+            <td>Tránh chạy với secret rỗng hoặc mặc định</td>
+            <td>Container không khởi động nếu quên cấu hình — đúng ý muốn</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert danger">
+      <div class="head">Chưa làm — đừng hiểu nhầm là đã bảo vệ</div>
+      <p>Hiện mới <strong>phát</strong> token, chưa có guard nào kiểm tra token. Mọi route vẫn public. Bước tiếp theo mới thêm <code>JwtAuthGuard</code> và <code>GET /api/users/me</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Câu hỏi có thể bị hỏi</h2>
+
+    <details>
+      <summary>JWT khác session cookie thế nào?</summary>
+      <p>Session lưu trạng thái ở server: mỗi request phải tra DB/Redis. JWT không lưu trạng thái: server chỉ kiểm tra chữ ký. Đổi lại, JWT khó thu hồi ngay và dung lượng lớn hơn cookie session.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao dùng <code>sub</code> mà không phải <code>userId</code>?</summary>
+      <p><code>sub</code> là claim chuẩn trong JWT (RFC 7519), nghĩa là “subject”. Dùng tên chuẩn giúp thư viện và hệ thống khác hiểu token mà không cần tài liệu riêng. <code>role</code> là claim tự đặt, được phép.</p>
+    </details>
+
+    <details>
+      <summary>Ai đó sửa <code>role</code> trong token để thành ADMIN được không?</summary>
+      <p>Không. Sửa payload làm chữ ký không còn khớp. Server verify bằng <code>JWT_SECRET</code> và từ chối token. Điều kiện là secret không bị lộ.</p>
+    </details>
+
+    <details>
+      <summary>Nếu <code>JWT_SECRET</code> bị lộ thì sao?</summary>
+      <p>Kẻ tấn công ký được token giả với bất kỳ <code>role</code> nào. Khi đó phải đổi secret, khiến toàn bộ token cũ mất hiệu lực, và rà soát log. Vì vậy secret phải nằm trong env, không commit, không log.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao bcrypt.compare chậm mà vẫn dùng?</summary>
+      <p>Chậm là mục đích. Kẻ tấn công có hash cũng phải thử từng mật khẩu với cost 12, rất tốn thời gian. Người dùng thật chỉ chịu ~300ms mỗi lần đăng nhập.</p>
+    </details>
+
+    <details>
+      <summary>Token nên lưu ở đâu phía client?</summary>
+      <p>Chưa làm frontend. Khi làm, cần cân nhắc: <code>localStorage</code> dễ dùng nhưng dễ bị XSS đọc; cookie <code>HttpOnly</code> an toàn hơn với XSS nhưng cần chống CSRF. Với đồ án, có thể dùng <code>localStorage</code> và ghi rõ giới hạn.</p>
+    </details>
+  </section>
+
+  <section>
+    <div class="next">
+      <h2>Bước tiếp theo</h2>
+      <p><strong>JwtAuthGuard + <code>GET /api/users/me</code>.</strong></p>
+      <p>Guard đọc header <code>Authorization: Bearer &lt;token&gt;</code>, verify chữ ký, gắn user vào request. Route <code>/me</code> trả thông tin tài khoản hiện tại. Test: không token → 401, token hợp lệ → 200.</p>
+      <p>Sau đó mới đến claim trial và gọi S2.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>S1 — Account &amp; Trial · Đăng nhập &amp; JWT</span>
+    <span>Phong cách: GitHub · Cập nhật 06/11/2026</span>
+  </div>
+
+</div>
+</body>
+</html>

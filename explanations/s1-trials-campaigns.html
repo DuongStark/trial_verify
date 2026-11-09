@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Campaigns — S1 Trials | Netflix style</title>
+<style>
+  :root {
+    --bg: #000000;
+    --panel: #141414;
+    --panel-2: #1f1f1f;
+    --code: #0b0b0b;
+    --text: #ffffff;
+    --muted: #b3b3b3;
+    --faint: #808080;
+    --line: #333333;
+    --red: #e50914;
+    --red-soft: rgba(229, 9, 20, 0.14);
+    --green: #46d369;
+    --green-soft: rgba(70, 211, 105, 0.12);
+    --radius: 8px;
+    --max: 1120px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Netflix Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  a:hover { text-decoration: none; }
+
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.72));
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .brand {
+    color: var(--red);
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .nav-links a:hover { color: #fff; }
+  .nav-badge { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
+
+  .billboard {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 75% 20%, rgba(229,9,20,.42), transparent 55%),
+      radial-gradient(ellipse at 15% 85%, rgba(80,0,10,.55), transparent 55%),
+      linear-gradient(120deg, #000 15%, #1a0004 55%, #000 100%);
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .billboard::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, #000 2%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .billboard-inner {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 82px 24px 74px;
+  }
+
+  .badge-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+
+  .n-badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 4px;
+    background: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 20px;
+  }
+
+  .badge-text {
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #d2d2d2;
+    font-weight: 700;
+  }
+
+  .billboard h1 {
+    margin: 0 0 16px;
+    max-width: 760px;
+    font-size: clamp(2.6rem, 7vw, 5rem);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    font-weight: 900;
+  }
+
+  .billboard p {
+    margin: 0 0 20px;
+    max-width: 640px;
+    color: #d2d2d2;
+    font-size: clamp(1rem, 1.6vw, 1.16rem);
+  }
+
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 26px; }
+
+  .meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #d2d2d2;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 3px 8px;
+  }
+
+  .meta.green { color: var(--green); border-color: rgba(70,211,105,.5); }
+  .meta.red { color: #ff6b6b; border-color: rgba(229,9,20,.55); }
+
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 4px;
+    padding: 11px 22px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  .btn.primary { background: var(--red); color: #fff; }
+  .btn.primary:hover { background: #f6121d; }
+  .btn.ghost { background: rgba(109,109,110,.7); color: #fff; }
+  .btn.ghost:hover { background: rgba(109,109,110,.45); }
+
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px 90px; }
+
+  section { padding: 46px 0; border-bottom: 1px solid #1f1f1f; }
+  section:last-of-type { border-bottom: none; }
+
+  .kicker {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+    letter-spacing: -0.03em;
+    font-weight: 800;
+  }
+
+  .sub { margin: 0 0 24px; color: var(--muted); max-width: 760px; }
+
+  h3 { margin: 28px 0 10px; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 5px 0; color: #d2d2d2; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #e5e5e5;
+  }
+
+  /* Episode row */
+  .episodes {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+  }
+
+  .episode {
+    flex: 0 0 196px;
+    background: var(--panel);
+    border: 1px solid #242424;
+    border-radius: 6px;
+    overflow: hidden;
+    transition: transform .15s, border-color .15s;
+  }
+
+  .episode:hover { transform: translateY(-3px); border-color: #555; }
+
+  .episode-thumb {
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 900;
+    color: rgba(255,255,255,.9);
+    background: linear-gradient(135deg, #2a0004, #6b0009);
+    position: relative;
+  }
+
+  .episode-thumb span {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,.7);
+    font-weight: 700;
+  }
+
+  .episode-body { padding: 12px 13px 15px; }
+  .episode-body strong { display: block; font-size: 0.92rem; margin-bottom: 3px; }
+  .episode-body p { margin: 0; color: var(--faint); font-size: 0.8rem; line-height: 1.45; }
+
+  /* Code */
+  .code {
+    background: var(--code);
+    border: 1px solid #262626;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 14px 0 22px;
+  }
+
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #262626;
+    padding: 9px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .code-head .name { color: #e5e5e5; }
+
+  .code pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 0.81rem;
+    line-height: 1.65;
+    tab-size: 2;
+    color: #d5d5d5;
+  }
+
+  .c { color: #7a7a7a; }
+  .k { color: #ff6b6b; }
+  .s { color: #a5d6ff; }
+  .f { color: #d2a8ff; }
+  .n { color: #79c0ff; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border: 1px solid #262626; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid #262626; vertical-align: top; }
+  th { background: #191919; color: var(--muted); font-weight: 700; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #111; }
+
+  /* Callouts */
+  .note {
+    border-left: 4px solid var(--red);
+    background: var(--red-soft);
+    border-radius: 0 6px 6px 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+  }
+
+  .note .head { font-weight: 800; color: #ff8a8a; margin-bottom: 4px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note.green { border-color: var(--green); background: var(--green-soft); }
+  .note.green .head { color: var(--green); }
+  .note.neutral { border-color: #555; background: #141414; }
+  .note.neutral .head { color: #fff; }
+
+  /* Q&A */
+  details {
+    background: var(--panel);
+    border: 1px solid #242424;
+    border-radius: 6px;
+    padding: 13px 16px;
+    margin: 8px 0;
+  }
+
+  summary { cursor: pointer; font-weight: 700; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--red); margin-right: 9px; display: inline-block; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details p { margin: 10px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+  .next {
+    background: linear-gradient(120deg, rgba(229,9,20,.18), rgba(229,9,20,.03));
+    border: 1px solid rgba(229,9,20,.4);
+    border-radius: 10px;
+    padding: 26px;
+    margin-top: 18px;
+  }
+
+  .next .kicker { margin-bottom: 6px; }
+  .next h2 { margin-bottom: 10px; }
+  .next p { color: var(--muted); margin-bottom: 8px; }
+  .next p:last-child { margin-bottom: 0; }
+
+  .footer {
+    padding: 30px 0 10px;
+    color: var(--faint);
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 720px) {
+    .billboard-inner { padding: 58px 18px 54px; }
+    .wrap { padding: 0 18px 60px; }
+    .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-inner">
+    <div class="brand">S1</div>
+    <div class="nav-links">
+      <a href="#flow">Luồng</a>
+      <a href="#code">Code</a>
+      <a href="#ket-qua">Kết quả</a>
+      <a href="#hoi-dap">Hỏi đáp</a>
+    </div>
+    <span class="nav-badge">Tài liệu · 08/11/2026</span>
+  </div>
+</div>
+
+<header class="billboard">
+  <div class="billboard-inner">
+    <div class="badge-row">
+      <div class="n-badge">S1</div>
+      <span class="badge-text">Original series · Trials API</span>
+    </div>
+    <h1>Danh sách<br />campaign.</h1>
+    <p>Tập mới nhất trong series Account &amp; Trial: route đầu tiên trả dữ liệu thật từ database, được bảo vệ bằng JWT.</p>
+    <div class="meta-row">
+      <span class="meta green">200 OK</span>
+      <span class="meta red">401 thiếu token</span>
+      <span class="meta">PREMIUM_7_DAYS</span>
+      <span class="meta">15 tests pass</span>
+    </div>
+    <div class="buttons">
+      <a class="btn primary" href="#flow">▶ Xem luồng</a>
+      <a class="btn ghost" href="#code">Xem code</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section id="flow">
+    <div class="kicker">Tập 1 · Luồng request</div>
+    <h2>Bốn cảnh trước khi trả dữ liệu</h2>
+    <p class="sub">Route này ngắn, nhưng đi qua đủ các lớp: xác thực, controller, service và database.</p>
+
+    <div class="episodes">
+      <div class="episode">
+        <div class="episode-thumb">01<span>CLIENT</span></div>
+        <div class="episode-body">
+          <strong>Gửi token</strong>
+          <p><code>GET /api/trials/campaigns</code> với header Bearer.</p>
+        </div>
+      </div>
+      <div class="episode">
+        <div class="episode-thumb">02<span>GUARD</span></div>
+        <div class="episode-body">
+          <strong>Kiểm tra vé</strong>
+          <p>Verify chữ ký và <code>exp</code>. Sai thì dừng tại đây.</p>
+        </div>
+      </div>
+      <div class="episode">
+        <div class="episode-thumb">03<span>SERVICE</span></div>
+        <div class="episode-body">
+          <strong>Hỏi database</strong>
+          <p><code>findMany</code> chỉ lấy campaign <code>active = true</code>.</p>
+        </div>
+      </div>
+      <div class="episode">
+        <div class="episode-thumb">04<span>RESPONSE</span></div>
+        <div class="episode-body">
+          <strong>Trả mảng JSON</strong>
+          <p>Mỗi phần tử gồm 4 trường, không lộ dữ liệu thừa.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="code">
+      <div class="code-head"><span class="name">Luồng</span><span>text</span></div>
+<pre>Authorization: Bearer &lt;token&gt;
+        │
+        ▼
+JwtAuthGuard  ── thiếu / sai token → 401
+        │
+        ▼
+TrialsController.listCampaigns()
+        │
+        ▼
+TrialsService.listActiveCampaigns()
+        │
+        ▼
+Prisma: trial_campaigns WHERE active = true
+        │
+        ▼
+200 [ { campaignId, name, durationDays, active } ]</pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Tập 2 · Thay đổi</div>
+    <h2>File đã tạo và sửa</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Loại</th><th>Nội dung</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/trials/trials.service.ts</code></td>
+            <td>Mới</td>
+            <td>Query campaign đang active, chỉ chọn 4 cột cần thiết.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.controller.ts</code></td>
+            <td>Mới</td>
+            <td><code>GET /api/trials/campaigns</code> với <code>JwtAuthGuard</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.module.ts</code></td>
+            <td>Mới</td>
+            <td>Gom controller + service, import <code>AuthModule</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.service.spec.ts</code></td>
+            <td>Mới</td>
+            <td>2 test: lọc active + trả mảng rỗng.</td>
+          </tr>
+          <tr>
+            <td><code>src/app.module.ts</code></td>
+            <td>Sửa</td>
+            <td>Import <code>TrialsModule</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="code">
+    <div class="kicker">Tập 3 · Code</div>
+    <h2>Service quyết định lấy gì</h2>
+
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/trials.service.ts</span><span>TypeScript</span></div>
+<pre><span class="k">@Injectable</span>()
+<span class="k">export class</span> <span class="f">TrialsService</span> {
+  <span class="f">constructor</span>(<span class="k">private readonly</span> prisma: PrismaService) {}
+
+  <span class="c">// Chỉ trả campaign đang bật; campaign tắt không nên xuất hiện cho user.</span>
+  <span class="f">listActiveCampaigns</span>(): Promise&lt;CampaignView[]&gt; {
+    <span class="k">return</span> <span class="k">this</span>.prisma.trialCampaign.<span class="f">findMany</span>({
+      where: { active: <span class="k">true</span> },
+      select: {
+        campaignId: <span class="k">true</span>,
+        name: <span class="k">true</span>,
+        durationDays: <span class="k">true</span>,
+        active: <span class="k">true</span>,
+      },
+      orderBy: { campaignId: <span class="s">'asc'</span> },
+    });
+  }
+}</pre>
+    </div>
+
+    <h3>Vì sao lọc <code>active: true</code>?</h3>
+    <p>Campaign có thể bị tắt mà không xóa — ví dụ hết chương trình khuyến mãi. Lọc ở query đảm bảo user không thấy campaign đã đóng, và không cần xử lý ở frontend.</p>
+
+    <h3>Vì sao chỉ <code>select</code> 4 cột?</h3>
+    <p>Bảng hiện chỉ có 4 cột, nhưng thói quen tốt là chỉ lấy thứ sẽ trả về. Sau này thêm cột nội bộ (ngân sách, ghi chú...) sẽ không vô tình lộ ra API.</p>
+
+    <h3>Vì sao sắp xếp theo <code>campaignId</code>?</h3>
+    <p>Kết quả ổn định giữa các lần gọi. Nếu không sắp xếp, thứ tự do database quyết định và có thể thay đổi — frontend sẽ thấy danh sách nhảy loạn.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Tập 4 · Controller</div>
+    <h2>Guard đứng trước, service đứng sau</h2>
+
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/trials.controller.ts</span><span>TypeScript</span></div>
+<pre><span class="k">@Controller</span>(<span class="s">'api/trials'</span>)
+<span class="k">export class</span> <span class="f">TrialsController</span> {
+  <span class="f">constructor</span>(<span class="k">private readonly</span> trialsService: TrialsService) {}
+
+  <span class="k">@Get</span>(<span class="s">'campaigns'</span>)
+  <span class="k">@UseGuards</span>(JwtAuthGuard)
+  <span class="f">listCampaigns</span>(): Promise&lt;CampaignView[]&gt; {
+    <span class="k">return</span> <span class="k">this</span>.trialsService.<span class="f">listActiveCampaigns</span>();
+  }
+}</pre>
+    </div>
+
+    <div class="note neutral">
+      <div class="head">Route này không cần biết user là ai</div>
+      <p>Nó chỉ cần biết request có token hợp lệ. Vì vậy không dùng <code>@CurrentUser()</code> — thêm vào chỉ làm code rối. Khi làm claim mới cần userId để biết ai đang nhận trial.</p>
+    </div>
+  </section>
+
+  <section id="ket-qua">
+    <div class="kicker">Tập 5 · Kết quả</div>
+    <h2>Chạy thật qua gateway</h2>
+
+    <h3>Có token hợp lệ — 200</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">GET /api/trials/campaigns</span><span>JSON</span></div>
+<pre>[
+  {
+    <span class="s">"campaignId"</span>: <span class="s">"PREMIUM_7_DAYS"</span>,
+    <span class="s">"name"</span>: <span class="s">"Premium 7 Days Trial"</span>,
+    <span class="s">"durationDays"</span>: <span class="n">7</span>,
+    <span class="s">"active"</span>: <span class="k">true</span>
+  }
+]</pre>
+    </div>
+
+    <h3>Không token — 401</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">401 Unauthorized</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"AUTH_TOKEN_MISSING"</span>,
+  <span class="s">"message"</span>: <span class="s">"Thiếu access token"</span>
+}</pre>
+    </div>
+
+    <div class="note green">
+      <div class="head">Test tự động</div>
+      <p><code>npm test</code> → 6 file, <strong>15 test pass</strong>. Thêm 2 test cho TrialsService: lọc active và trả mảng rỗng.</p>
+    </div>
+
+    <h3>Thử bằng tay</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">terminal</span><span>bash</span></div>
+<pre><span class="c"># Lấy token</span>
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{"email":"alice@example.com","password":"mat-khau-123"}'</span> \
+  | python3 -c <span class="s">"import sys,json; print(json.load(sys.stdin)['accessToken'])"</span>)
+
+<span class="c"># Gọi danh sách campaign</span>
+curl -s http://localhost:8080/api/trials/campaigns \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span></pre>
+    </div>
+  </section>
+
+  <section id="hoi-dap">
+    <div class="kicker">Phần thưởng · Hỏi đáp</div>
+    <h2>Câu hỏi có thể bị hỏi</h2>
+
+    <details>
+      <summary>Vì sao trả mảng trực tiếp mà không bọc trong object?</summary>
+      <p>Endpoint chỉ trả một loại dữ liệu, không cần metadata. Mảng trực tiếp đơn giản cho frontend. Nếu sau này cần phân trang hoặc tổng số, có thể đổi thành <code>{ items, total }</code> — đó là thay đổi API có kiểm soát.</p>
+    </details>
+
+    <details>
+      <summary>Ai được gọi route này?</summary>
+      <p>Mọi tài khoản có token hợp lệ, cả USER và ADMIN. Chưa có phân quyền theo role. Nếu cần giới hạn, thêm role guard — ví dụ chỉ ADMIN được xem campaign nháp.</p>
+    </details>
+
+    <details>
+      <summary>Campaign bị tắt giữa lúc user đang xem thì sao?</summary>
+      <p>Lần gọi tiếp theo sẽ không thấy campaign đó. Nếu user đã mở form claim trước khi campaign bị tắt, bước <code>POST /claims</code> sẽ kiểm tra lại và trả <code>422 CAMPAIGN_INACTIVE</code> — không tin dữ liệu cũ từ client.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao không cache danh sách campaign?</summary>
+      <p>Danh sách rất nhỏ và ít thay đổi, nhưng cache thêm phức tạp: phải biết khi nào xóa cache. Với MVP, query trực tiếp đủ nhanh. Khi có hàng nghìn request/phút mới cân nhắc.</p>
+    </details>
+
+    <details>
+      <summary>Nếu database không có campaign nào thì sao?</summary>
+      <p>Trả <code>200 []</code>. Đây không phải lỗi — hệ thống vẫn hoạt động, chỉ là chưa có chương trình nào đang bật.</p>
+    </details>
+  </section>
+
+  <section>
+    <div class="next">
+      <div class="kicker">Tập tiếp theo</div>
+      <h2><code>POST /api/trials/claims</code></h2>
+      <p>Đây là phần khó nhất của S1: tạo claim với idempotency, ghi outbox trong cùng transaction, gọi S2 và áp auto policy.</p>
+      <p>Đề xuất chia nhỏ: (1) tạo claim <code>PENDING_RISK_CHECK</code> + outbox, (2) gọi S2, (3) áp kết quả ALLOW / VERIFY / REJECT. Mỗi bước test xong mới sang bước sau.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>S1 — Account &amp; Trial · Campaigns</span>
+    <span>Phong cách: Netflix · Cập nhật 08/11/2026</span>
+  </div>
+
+</div>
+</body>
+</html>

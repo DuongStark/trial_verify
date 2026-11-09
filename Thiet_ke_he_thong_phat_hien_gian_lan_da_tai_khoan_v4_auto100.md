@@ -1664,7 +1664,9 @@ Làm tương tự cho `account_trial_db`.
 
 ### 13.2. Password
 
-- Argon2id.
+- bcrypt, 12 rounds (`bcryptjs`).
+- Ghi chú quyết định: thiết kế trước ghi Argon2id; nhóm chốt dùng bcrypt cho MVP vì `bcryptjs` là JavaScript thuần, không cần biên dịch native trong image `node:24-bookworm-slim`, giảm rủi ro build trên nhiều máy.
+- Đánh đổi: Argon2id kháng GPU/ASIC tốt hơn bcrypt. Nếu triển khai thật hoặc còn thời gian, có thể chuyển sang Argon2id (ví dụ `@node-rs/argon2`) mà không đổi schema hay API.
 - Không log password.
 - Rate limit login/register.
 

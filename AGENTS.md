@@ -78,10 +78,22 @@ Mỗi bước nên có:
   - PrismaModule + PrismaService đã nối vào AppModule.
   - Đã tạo bảng trong PostgreSQL bằng `prisma db push`.
   - Service vẫn health OK; chưa có API nghiệp vụ.
-- **Bước tiếp theo — M2.2**:
-  - Seed campaign `PREMIUM_7_DAYS`.
-  - Tạo AuthModule: register/login/JWT.
-  - Test register/login qua HTTP.
+- **M2.2 xong một phần**:
+  - Seed campaign `PREMIUM_7_DAYS` bằng `prisma/seed.js` + `prisma db seed`.
+  - `AuthModule` với `POST /api/auth/register`.
+  - Chuẩn hóa email, hash bcrypt 12 rounds, trả 409 `EMAIL_ALREADY_EXISTS`.
+  - `ValidationPipe` toàn cục, lỗi 400 `VALIDATION_ERROR` thống nhất.
+  - `POST /api/auth/login` trả JWT 1 giờ; sai thông tin trả 401 `INVALID_CREDENTIALS`.
+  - `JwtAuthGuard` kiểm tra Bearer token; `GET /api/users/me` trả hồ sơ hiện tại.
+  - `GET /api/trials/campaigns` trả campaign active, có guard.
+  - `POST /api/trials/claims` tạo claim `PENDING_RISK_CHECK` + outbox audit, idempotency bằng `Idempotency-Key`.
+  - S1 gọi S2 `POST /internal/risk/assessments`; S2 có stub trả ALLOW/LOW, bảo vệ bằng `X-Internal-Token`.
+  - S1 lưu `assessmentId`, `riskScore`, `riskLevel`, `decision` vào claim; S2 lỗi thì giữ PENDING và ghi `lastError`.
+  - Unit test AuthService, guard, UsersService, TrialsService, RiskClient và S2 pass; đã test qua gateway.
+- **Bước tiếp theo — M2.2 phần còn lại**:
+  - 3c: áp auto policy ALLOW → ACTIVE, VERIFY → VERIFY_REQUIRED, REJECT → REJECTED.
+  - Thêm outbox `trial.activated.v1` / `trial.rejected.v1` và OTP cho VERIFY.
+  - Test claim flow qua HTTP.
   - Làm từng bước nhỏ, test sau mỗi bước.
 
 ## 7. Quy ước kỹ thuật
@@ -92,6 +104,7 @@ Mỗi bước nên có:
 - Tài liệu giải thích do người dùng yêu cầu tạo (HTML/MD) đặt trong `explanations/`.
   - Không đặt code, Dockerfile, migration hay config vào đây.
   - Cập nhật `explanations/README.md` khi thêm file mới.
+  - Tài liệu HTML mới chọn ngẫu nhiên phong cách trong `explanations/brand-styles.md`.
 - Apps:
   - `apps/account-trial-service`
   - `apps/graph-risk-service`

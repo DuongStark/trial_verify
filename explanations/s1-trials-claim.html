@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>POST /api/trials/claims — Claim &amp; Outbox | S1</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --soft: #f7f5f2;
+    --soft-2: #f1efec;
+    --ink: #1e1919;
+    --muted: #5f5c5a;
+    --faint: #8b8784;
+    --line: #e4e0dc;
+    --blue: #0061ff;
+    --blue-dark: #0052d6;
+    --blue-soft: #e8f1ff;
+    --green: #1c7c54;
+    --green-soft: #e6f4ee;
+    --red: #c62828;
+    --red-soft: #fdecea;
+    --amber: #8a5a00;
+    --amber-soft: #fff4dd;
+    --radius: 14px;
+    --max: 1040px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Sharp Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.02em; }
+
+  .logo-mark {
+    width: 30px;
+    height: 30px;
+    background: var(--blue);
+    border-radius: 6px;
+    position: relative;
+    transform: rotate(45deg);
+  }
+
+  .logo-mark::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    background: #fff;
+    border-radius: 3px;
+  }
+
+  .nav-links { display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  .nav-links a { color: var(--muted); }
+  .nav-links a:hover { color: var(--ink); text-decoration: none; }
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 85% 15%, rgba(0,97,255,.12), transparent 42%),
+      radial-gradient(circle at 10% 90%, rgba(0,97,255,.07), transparent 40%),
+      var(--soft);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-shape {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid rgba(0,97,255,.18);
+  }
+
+  .hero-shape.one { width: 220px; height: 220px; right: -60px; top: 40px; }
+  .hero-shape.two { width: 120px; height: 120px; right: 120px; bottom: -50px; background: rgba(0,97,255,.08); border: none; }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 76px 24px 68px;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    max-width: 780px;
+    font-size: clamp(2.3rem, 6vw, 4rem);
+    line-height: 1.03;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+  }
+
+  .hero p {
+    margin: 0 0 22px;
+    max-width: 640px;
+    color: var(--muted);
+    font-size: clamp(1.02rem, 1.8vw, 1.18rem);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .chip.blue { color: var(--blue-dark); border-color: rgba(0,97,255,.3); background: var(--blue-soft); }
+  .chip.green { color: var(--green); border-color: rgba(28,124,84,.3); background: var(--green-soft); }
+  .chip.red { color: var(--red); border-color: rgba(198,40,40,.25); background: var(--red-soft); }
+
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px 90px; }
+
+  section { padding: 46px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    letter-spacing: -0.03em;
+    font-weight: 800;
+  }
+
+  .sub { margin: 0 0 24px; color: var(--muted); max-width: 760px; }
+
+  h3 { margin: 28px 0 10px; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 6px 0; color: #3f3c3a; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--ink);
+  }
+
+  /* Steps */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+    margin: 22px 0;
+  }
+
+  .step {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(30,25,25,.03);
+  }
+
+  .step .n {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .step strong { display: block; margin-bottom: 4px; font-size: 0.98rem; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+  /* Notes */
+  .note {
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+    background: var(--blue-soft);
+    border: 1px solid rgba(0,97,255,.18);
+  }
+
+  .note .head { font-weight: 800; color: var(--blue-dark); margin-bottom: 4px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note.green { background: var(--green-soft); border-color: rgba(28,124,84,.2); }
+  .note.green .head { color: var(--green); }
+  .note.amber { background: var(--amber-soft); border-color: rgba(138,90,0,.2); }
+  .note.amber .head { color: var(--amber); }
+  .note.red { background: var(--red-soft); border-color: rgba(198,40,40,.2); }
+  .note.red .head { color: var(--red); }
+
+  /* Code */
+  .code {
+    background: #fbfaf9;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 14px 0 22px;
+  }
+
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--soft);
+    border-bottom: 1px solid var(--line);
+    padding: 9px 15px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .code-head .name { color: var(--ink); }
+
+  .code pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 0.81rem;
+    line-height: 1.68;
+    tab-size: 2;
+    color: #24292f;
+  }
+
+  .c { color: #8b8784; }
+  .k { color: #a626a4; }
+  .s { color: #1c7c54; }
+  .f { color: #0061ff; }
+  .n { color: #b76b00; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); color: var(--muted); font-weight: 800; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #faf9f8; }
+
+  /* Transaction */
+  .tx {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    align-items: center;
+    margin: 20px 0;
+  }
+
+  .tx-box {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    background: #fff;
+    text-align: center;
+  }
+
+  .tx-box strong { display: block; margin-bottom: 4px; }
+  .tx-box span { color: var(--muted); font-size: 0.86rem; }
+  .tx-plus { font-size: 24px; color: var(--blue); font-weight: 800; text-align: center; }
+
+  /* Q&A */
+  details {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin: 10px 0;
+    background: #fff;
+  }
+
+  summary { cursor: pointer; font-weight: 800; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "+"; color: var(--blue); margin-right: 10px; font-weight: 800; }
+  details[open] summary::before { content: "−"; }
+  details p { margin: 10px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+  .next {
+    background: var(--blue);
+    color: #fff;
+    border-radius: 18px;
+    padding: 30px 32px;
+    margin-top: 20px;
+  }
+
+  .next h2 { color: #fff; margin-bottom: 10px; }
+  .next p { color: rgba(255,255,255,.85); margin-bottom: 8px; }
+  .next p:last-child { margin-bottom: 0; }
+  .next code { background: rgba(255,255,255,.15); border-color: rgba(255,255,255,.2); color: #fff; }
+
+  .footer {
+    padding-top: 34px;
+    color: var(--faint);
+    font-size: 0.84rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 700px) {
+    .hero-inner { padding: 54px 18px 48px; }
+    .wrap { padding: 0 18px 60px; }
+    .nav-links { display: none; }
+    .tx { grid-template-columns: 1fr; }
+    .tx-plus { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-inner">
+    <div class="logo"><div class="logo-mark"></div> S1 Trials</div>
+    <div class="nav-links">
+      <a href="#idempotency">Idempotency</a>
+      <a href="#code">Code</a>
+      <a href="#ket-qua">Kết quả</a>
+      <a href="#hoi-dap">Hỏi đáp</a>
+    </div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="hero-shape one"></div>
+  <div class="hero-shape two"></div>
+  <div class="hero-inner">
+    <span class="eyebrow">Bước 3a · Claim cơ bản</span>
+    <h1>Nhận trial,<br />không nhận trùng.</h1>
+    <p>Tạo claim <code>PENDING_RISK_CHECK</code> và ghi outbox audit trong cùng một transaction. Idempotency đảm bảo bấm nhiều lần vẫn chỉ có một claim.</p>
+    <div class="chips">
+      <span class="chip green">202 Accepted</span>
+      <span class="chip red">409 đã nhận</span>
+      <span class="chip blue">Idempotency-Key</span>
+      <span class="chip">transactional outbox</span>
+      <span class="chip">21 tests pass</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <h2>Bốn bước trong một request</h2>
+    <p class="sub">Claim chưa gọi S2 ở bước này. Mục tiêu là lưu đúng trạng thái chờ và không tạo trùng.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="n">1</div>
+        <strong>Kiểm tra key</strong>
+        <p>Header <code>Idempotency-Key</code> bắt buộc. Thiếu → 400.</p>
+      </div>
+      <div class="step">
+        <div class="n">2</div>
+        <strong>Kiểm tra campaign</strong>
+        <p>Không tồn tại hoặc đã tắt → 422 <code>CAMPAIGN_INACTIVE</code>.</p>
+      </div>
+      <div class="step">
+        <div class="n">3</div>
+        <strong>Tạo claim + outbox</strong>
+        <p>Hai INSERT trong một transaction. Một cái lỗi thì cả hai rollback.</p>
+      </div>
+      <div class="step">
+        <div class="n">4</div>
+        <strong>Trả 202</strong>
+        <p>Claim đang chờ S2 đánh giá, chưa phải ACTIVE.</p>
+      </div>
+    </div>
+
+    <div class="code">
+      <div class="code-head"><span class="name">Luồng</span><span>text</span></div>
+<pre>POST /api/trials/claims
+Authorization: Bearer &lt;token&gt;
+Idempotency-Key: demo-key-1
+{ "campaignId": "PREMIUM_7_DAYS" }
+
+        │
+        ▼
+JwtAuthGuard ── thiếu / sai token → 401
+        │
+        ▼
+Kiểm tra Idempotency-Key ── thiếu → 400
+        │
+        ▼
+Campaign active? ── không → 422
+        │
+        ▼
+BEGIN
+  INSERT trial_claims  (PENDING_RISK_CHECK)
+  INSERT s1_outbox     (trial.claim_audit.v1)
+COMMIT
+        │
+        ▼
+202 { claimId, campaignId, status, evaluationVersion, ... }</pre>
+    </div>
+  </section>
+
+  <section id="idempotency">
+    <h2>Idempotency hoạt động thế nào?</h2>
+    <p class="sub">Cùng một ý định “nhận trial này” có thể bị gửi nhiều lần do mạng lag, người dùng bấm hai lần, hoặc client retry. Hệ thống phải cho kết quả giống nhau.</p>
+
+    <p>Request có hai “dấu vân tay”:</p>
+    <ul>
+      <li><code>Idempotency-Key</code> — do client tạo, đại diện cho <strong>một lần thao tác</strong>.</li>
+      <li><code>request_hash = SHA256({ campaignId })</code> — đại diện cho <strong>nội dung thao tác</strong>.</li>
+    </ul>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tình huống</th><th>Database</th><th>Kết quả</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Key mới, campaign chưa nhận</td>
+            <td>Chưa có bản ghi</td>
+            <td><span class="chip green">202</span> tạo claim mới</td>
+          </tr>
+          <tr>
+            <td>Cùng key + cùng hash</td>
+            <td>Đã có claim</td>
+            <td><span class="chip green">202</span> trả lại claim cũ, không tạo mới</td>
+          </tr>
+          <tr>
+            <td>Cùng key + khác hash</td>
+            <td>Đã có claim</td>
+            <td><span class="chip red">409</span> <code>IDEMPOTENCY_KEY_REUSED</code></td>
+          </tr>
+          <tr>
+            <td>Key khác + campaign đã nhận</td>
+            <td>Đã có claim</td>
+            <td><span class="chip red">409</span> <code>TRIAL_ALREADY_CLAIMED</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Vì sao hash chỉ gồm campaignId?</h3>
+    <p>Theo thiết kế, fingerprint có thể đổi giữa hai lần retry (đổi mạng, đổi trình duyệt). Nếu đưa fingerprint vào hash, cùng một ý định sẽ bị coi là payload khác và trả 409 oan. Hash chỉ giữ phần <strong>không đổi</strong>: campaignId.</p>
+
+    <h3>Vì sao không “tìm trước rồi tạo”?</h3>
+    <p>Hai request chạy song song có thể cùng thấy “chưa có” rồi cùng tạo. Database mới là trọng tài cuối cùng nhờ hai ràng buộc:</p>
+
+    <div class="code">
+      <div class="code-head"><span class="name">prisma/schema.prisma</span><span>Prisma</span></div>
+<pre><span class="f">@@unique</span>([userId, campaignId])
+<span class="f">@@unique</span>([userId, idempotencyKey])</pre>
+    </div>
+
+    <p>Nếu một request thua cuộc, PostgreSQL trả lỗi <code>P2002</code>. Code bắt lỗi này, query lại để biết nên trả claim cũ hay 409.</p>
+  </section>
+
+  <section id="code">
+    <h2>Transaction: claim và outbox</h2>
+    <p class="sub">Outbox là hàng đợi sự kiện nằm cùng database. Ghi claim mà quên outbox sẽ mất dấu audit; ghi outbox mà claim rollback sẽ báo sự kiện không có thật.</p>
+
+    <div class="tx">
+      <div class="tx-box">
+        <strong>trial_claims</strong>
+        <span>claim mới, PENDING_RISK_CHECK</span>
+      </div>
+      <div class="tx-plus">+</div>
+      <div class="tx-box">
+        <strong>s1_outbox</strong>
+        <span>trial.claim_audit.v1, status NEW</span>
+      </div>
+    </div>
+
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/trials.service.ts</span><span>TypeScript</span></div>
+<pre><span class="k">return await</span> <span class="k">this</span>.prisma.<span class="f">$transaction</span>(<span class="k">async</span> (tx) =&gt; {
+  <span class="k">const</span> claim = <span class="k">await</span> tx.trialClaim.<span class="f">create</span>({
+    data: {
+      userId,
+      campaignId: dto.campaignId,
+      idempotencyKey: key,
+      requestHash,
+    },
+    select: CLAIM_SELECT,
+  });
+
+  <span class="k">await</span> tx.outboxEvent.<span class="f">create</span>({
+    data: {
+      aggregateId: claim.claimId,
+      aggregateVersion: <span class="n">1</span>,
+      eventType: <span class="s">'trial.claim_audit.v1'</span>,
+      payloadJson: {
+        claimId: claim.claimId,
+        userId,
+        campaignId: claim.campaignId,
+        status: claim.status,
+        requestedAt: claim.requestedAt.<span class="f">toISOString</span>(),
+      },
+    },
+  });
+
+  <span class="k">return</span> claim;
+});</pre>
+    </div>
+
+    <div class="note green">
+      <div class="head">Transactional outbox là gì?</div>
+      <p>Thay vì ghi DB rồi publish RabbitMQ ngay (có thể publish thất bại), hệ thống ghi sự kiện vào bảng outbox trong cùng transaction. Một worker riêng đọc outbox và publish sau. Nhờ vậy không bao giờ có claim mà thiếu event, hoặc event cho claim không tồn tại.</p>
+    </div>
+
+    <h3>Bắt lỗi P2002</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/trials.service.ts</span><span>TypeScript</span></div>
+<pre><span class="k">catch</span> (error) {
+  <span class="k">if</span> (
+    error <span class="k">instanceof</span> Prisma.PrismaClientKnownRequestError &amp;&amp;
+    error.code === <span class="s">'P2002'</span>
+  ) {
+    <span class="k">return</span> <span class="k">this</span>.<span class="f">resolveClaimConflict</span>(
+      userId,
+      dto.campaignId,
+      key,
+      requestHash,
+    );
+  }
+
+  <span class="k">throw</span> error;
+}</pre>
+    </div>
+
+    <p><code>resolveClaimConflict</code> kiểm tra theo thứ tự:</p>
+    <ol>
+      <li>Tìm claim theo <code>(userId, idempotencyKey)</code>. Có và cùng hash → trả claim cũ. Có và khác hash → 409 <code>IDEMPOTENCY_KEY_REUSED</code>.</li>
+      <li>Nếu không có theo key, tìm theo <code>(userId, campaignId)</code>. Có → 409 <code>TRIAL_ALREADY_CLAIMED</code>.</li>
+      <li>Không tìm thấy (transaction khác chưa commit) → 409 <code>CLAIM_CONFLICT</code> để client thử lại.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>File đã thay đổi</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Loại</th><th>Nội dung</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/trials/dto/create-claim.dto.ts</code></td>
+            <td>Mới</td>
+            <td>Validate <code>campaignId</code> không rỗng, tối đa 64 ký tự.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.service.ts</code></td>
+            <td>Sửa</td>
+            <td>Thêm <code>createClaim</code>, hash, transaction, xử lý P2002, <code>ClaimView</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.controller.ts</code></td>
+            <td>Sửa</td>
+            <td><code>POST /api/trials/claims</code>, đọc header <code>Idempotency-Key</code>, trả 202.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.service.spec.ts</code></td>
+            <td>Sửa</td>
+            <td>Thêm 5 test: tạo thành công, thiếu key, campaign tắt, replay, xung đột.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="ket-qua">
+    <h2>Kết quả chạy thật</h2>
+
+    <h3>Lần đầu — 202</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">Response</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"claimId"</span>: <span class="s">"196e1235-3eb7-42f4-8280-e820dd5aac5b"</span>,
+  <span class="s">"campaignId"</span>: <span class="s">"PREMIUM_7_DAYS"</span>,
+  <span class="s">"status"</span>: <span class="s">"PENDING_RISK_CHECK"</span>,
+  <span class="s">"evaluationVersion"</span>: <span class="n">1</span>,
+  <span class="s">"requestedAt"</span>: <span class="s">"2026-11-08T00:35:39.477Z"</span>,
+  <span class="s">"expiresAt"</span>: <span class="k">null</span>
+}</pre>
+    </div>
+
+    <h3>Lặp lại cùng key — 202, cùng claimId</h3>
+    <p>Không tạo bản ghi mới. Response giống hệt lần đầu, kể cả <code>requestedAt</code>.</p>
+
+    <h3>Key khác cùng campaign — 409</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">409 Conflict</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"TRIAL_ALREADY_CLAIMED"</span>,
+  <span class="s">"message"</span>: <span class="s">"Bạn đã nhận trial cho campaign này"</span>
+}</pre>
+    </div>
+
+    <h3>Thiếu Idempotency-Key — 400</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">400 Bad Request</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"IDEMPOTENCY_KEY_REQUIRED"</span>,
+  <span class="s">"message"</span>: <span class="s">"Thiếu header Idempotency-Key"</span>
+}</pre>
+    </div>
+
+    <h3>Trong database</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">PostgreSQL</span><span>SQL</span></div>
+<pre>trial_claims:
+  claim_id         = 196e1235-3eb7-42f4-8280-e820dd5aac5b
+  status           = PENDING_RISK_CHECK
+  evaluation_version = 1
+  idempotency_key  = demo-key-1
+
+s1_outbox:
+  event_type       = trial.claim_audit.v1
+  aggregate_id     = 196e1235-3eb7-42f4-8280-e820dd5aac5b
+  status           = NEW</pre>
+    </div>
+
+    <div class="note green">
+      <div class="head">Test tự động</div>
+      <p><code>npm test</code> → 6 file, <strong>21 test pass</strong>. Thêm 5 test cho claim: tạo thành công, thiếu key, campaign tắt, replay cùng key, xung đột key/campaign.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vì sao trả 202, không phải 201?</h2>
+    <p>201 thường dùng khi tài nguyên đã hoàn tất. Ở đây claim mới chỉ đang chờ S2 đánh giá — chưa biết ACTIVE, VERIFY hay REJECT. <code>202 Accepted</code> diễn tả đúng: “đã nhận yêu cầu, đang xử lý tiếp”.</p>
+
+    <div class="note amber">
+      <div class="head">Chưa gọi S2 ở bước này</div>
+      <p>Claim nằm ở <code>PENDING_RISK_CHECK</code> và outbox ở trạng thái <code>NEW</code>. Bước 3b sẽ thêm HTTP client gọi S2; bước 3c áp kết quả ALLOW / VERIFY / REJECT.</p>
+    </div>
+  </section>
+
+  <section id="hoi-dap">
+    <h2>Câu hỏi có thể bị hỏi</h2>
+
+    <details>
+      <summary>Vì sao cần Idempotency-Key thay vì cứ để unique (user, campaign)?</summary>
+      <p>Unique chỉ ngăn trùng claim. Idempotency-Key còn giúp phân biệt “retry cùng một thao tác” với “thao tác mới”. Cùng key + cùng payload trả lại kết quả cũ thay vì báo lỗi, nên client retry an toàn.</p>
+    </details>
+
+    <details>
+      <summary>Nếu client gửi cùng key nhưng campaign khác thì sao?</summary>
+      <p>Hash khác (vì hash tính từ campaignId) → 409 <code>IDEMPOTENCY_KEY_REUSED</code>. Một key chỉ được đại diện cho một ý định duy nhất.</p>
+    </details>
+
+    <details>
+      <summary>Outbox có phải message queue không?</summary>
+      <p>Không. Outbox là bảng trong PostgreSQL. Nó đảm bảo sự kiện được lưu atomic cùng dữ liệu nghiệp vụ. Một worker riêng (chưa làm) sẽ đọc bảng này và publish lên RabbitMQ.</p>
+    </details>
+
+    <details>
+      <summary>Nếu S2 chết thì claim có bị treo mãi không?</summary>
+      <p>Claim nằm <code>PENDING_RISK_CHECK</code> với <code>nextRetryAt</code> và <code>retryCount</code> trong schema. Bước sau sẽ thêm worker retry; hết <code>maxAttempts</code> thì xử lý theo policy. Hiện tại chưa có worker nên claim sẽ chờ.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao không publish RabbitMQ ngay trong transaction?</summary>
+      <p>Publish là thao tác mạng, không nằm trong transaction DB. Nếu publish thành công mà commit thất bại, event báo claim không tồn tại. Nếu commit thành công mà publish thất bại, mất audit. Outbox tránh cả hai bằng cách để worker publish sau.</p>
+    </details>
+
+    <details>
+      <summary>Claim đã PENDING có được gọi lại để “làm mới” không?</summary>
+      <p>Không. Cùng campaign chỉ có một claim theo unique constraint. Retry chỉ trả lại claim cũ nếu cùng key; muốn đổi ý định phải dùng key khác, nhưng sẽ bị 409 <code>TRIAL_ALREADY_CLAIMED</code>.</p>
+    </details>
+  </section>
+
+  <section>
+    <div class="next">
+      <h2>Bước tiếp theo — 3b</h2>
+      <p><strong>Gọi S2 để lấy risk assessment.</strong></p>
+      <p>Thêm HTTP client có timeout, gửi <code>claimId</code>, <code>userId</code>, <code>campaignId</code> và internal token. Lưu <code>assessmentId</code>, <code>riskScore</code>, <code>riskLevel</code> vào claim. Nếu S2 lỗi: giữ <code>PENDING_RISK_CHECK</code>, trả 202 và chờ retry.</p>
+      <p>Chưa áp policy ở bước này — chỉ lấy và lưu kết quả.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>S1 — Account &amp; Trial · Claim cơ bản &amp; Outbox</span>
+    <span>Phong cách: Dropbox · Cập nhật 08/11/2026</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -13,6 +13,8 @@
 **Phạm vi triển khai:** Đồ án/MVP minh họa, không phải hệ thống xác minh danh tính hoặc chống gian lận thương mại ở cấp production.  
 **Tài liệu căn cứ:** `bai-tap-lon-yeu-cau-gui-sinh-vien_1.docx` — yêu cầu bắt buộc 1–8, điểm cộng, sản phẩm nộp và quy định bảo vệ.
 
+> **Ghi chú cập nhật (06/11/2026):** Đây là tài liệu phiên bản cũ. Thiết kế chốt hiện hành là bản v4 (`Thiet_ke_he_thong_phat_hien_gian_lan_da_tai_khoan_v4_auto100.md`). Nội dung mật khẩu đã được đồng bộ theo triển khai: **bcrypt 12 rounds**; lý do và đánh đổi ghi tại v4 §13.2.
+
 ---
 
 ## MỤC LỤC
@@ -59,7 +61,7 @@ Phụ lục: [A. Sprint ưu tiên](#phụ-lục-a--thứ-tự-ưu-tiên-khi-bắ
 | Message broker | RabbitMQ | Luồng phụ bất đồng bộ, consumer idempotent + DLQ |
 | Browser Fingerprinting | FingerprintJS OSS | Tín hiệu rủi ro, không phải danh tính chắc chắn |
 | Graph UI | Cytoscape.js | Hiển thị mạng liên kết giữa các tài khoản |
-| Authentication | JWT + Argon2id | NestJS Guards xác thực; JWT ngay tại NGINX là mục cộng riêng, *chưa chốt* |
+| Authentication | JWT + bcrypt | NestJS Guards xác thực; JWT ngay tại NGINX là mục cộng riêng, *chưa chốt* |
 | Triển khai | Dockerfile từng service + `docker-compose.yml` | Chạy bằng `docker compose up` từ thư mục gốc |
 | API Contract | OpenAPI 3.x, một `.yaml`/service | Có thể sinh với `@nestjs/swagger` rồi xuất tệp |
 | Testing / CI | Postman, Jest/Supertest, GitHub Actions | Postman ≥10 request; CI là mục cộng |
@@ -202,7 +204,7 @@ U01–U03 có cùng fingerprint; U04 chỉ trùng IP. Không được kết lu�
 | ID | Module | Chức năng | Ưu tiên |
 |---|---|---|---|
 | A01 | Account | Đăng ký với email, mật khẩu | MUST |
-| A02 | Auth | Đăng nhập JWT, hash mật khẩu Argon2id | MUST |
+| A02 | Auth | Đăng nhập JWT, hash mật khẩu bcrypt | MUST |
 | A03 | Account | Xác minh email bằng mã demo | SHOULD |
 | A04 | Account | Xem thông tin tài khoản | MUST |
 | A05 | Trial | Xem chương trình dùng thử đang hoạt động | MUST |
@@ -418,7 +420,7 @@ S1 account_trial_db                      S2 Neo4j
 | React + Vite + Ant Design | User Web + Admin Dashboard | Frontend |
 | FingerprintJS OSS | Tín hiệu liên kết trình duyệt | Frontend, xử lý HMAC ở S2 |
 | Cytoscape.js | Vẽ mạng lưới tài khoản | Frontend |
-| JWT + Argon2id | AuthN/AuthZ và hash mật khẩu | S1 cấp token; 3 service validate theo scope |
+| JWT + bcrypt | AuthN/AuthZ và hash mật khẩu | S1 cấp token; 3 service validate theo scope |
 | `@nestjs/swagger` | Sinh và xuất mỗi tệp OpenAPI YAML | 3 NestJS service |
 | Jest + Supertest + Postman | Unit, integration, e2e, kiểm thử HTTP | Ba service |
 | Docker / Docker Compose | Build/khởi động hệ thống một lệnh | Từng service + hạ tầng |
@@ -446,7 +448,7 @@ S1 account_trial_db                      S2 Neo4j
 
 | Bảng | Khóa / thuộc tính quan trọng | Ràng buộc / tác dụng |
 |---|---|---|
-| `accounts` | `user_id UUID PK`, `email_normalized`, `password_hash`, `role`, `status`, `created_at` | UNIQUE(email_normalized); hash Argon2id |
+| `accounts` | `user_id UUID PK`, `email_normalized`, `password_hash`, `role`, `status`, `created_at` | UNIQUE(email_normalized); hash bcrypt |
 | `trial_campaigns` | `campaign_id TEXT PK`, `name`, `duration_days`, `active` | CHECK(duration_days > 0) |
 | `trial_claims` | `claim_id UUID PK`, `user_id`, `campaign_id`, `idempotency_key`, `status`, `assessment_id`, `evaluation_version`, `requested_at`, `activated_at`, `expires_at`, `version` | UNIQUE(user_id,campaign_id), UNIQUE(user_id,idempotency_key); FK chỉ trong S1 DB |
 | `s1_outbox` | `event_id UUID PK`, `type`, `payload_json JSONB`, `status`, `retry_count`, `created_at` | Lưu cùng transaction cập nhật claim |
@@ -1109,7 +1111,7 @@ Tất cả service ghi structured log `{timestamp, service, level, correlationId
 
 ### 16.1. Bảo mật
 
-- Hash mật khẩu bằng Argon2id; không tự tạo giải thuật hash.
+- Hash mật khẩu bằng bcrypt (12 rounds); không tự tạo giải thuật hash.
 - JWT có thời hạn hợp lý; ký với secret/key bảo vệ, kiểm tra `issuer`, `audience`, expiration.
 - Role guard cho admin, xác thực riêng service-to-service.
 - HTTPS ở môi trường công khai; nội bộ Docker network không mở cổng DB/RabbitMQ ra Internet.

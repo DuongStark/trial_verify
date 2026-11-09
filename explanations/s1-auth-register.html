@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Đăng ký tài khoản — AuthModule | S1 Account &amp; Trial</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f5f5f7;
+    --bg-code: #1d1d1f;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --line: #d2d2d7;
+    --blue: #0071e3;
+    --blue-soft: #e8f2ff;
+    --green: #1a7f37;
+    --green-soft: #e9f7ef;
+    --red: #c62828;
+    --red-soft: #fdecea;
+    --amber: #8a5a00;
+    --amber-soft: #fff6e0;
+    --radius: 20px;
+    --max: 980px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+      "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(255, 255, 255, 0.78);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .nav-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  .nav-title { font-weight: 600; letter-spacing: -0.01em; }
+  .nav-meta { color: var(--muted); }
+
+  .wrap {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  .hero {
+    padding: 88px 0 56px;
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0 auto 18px;
+    max-width: 780px;
+    font-size: clamp(2.4rem, 6vw, 4.4rem);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+  }
+
+  .hero p {
+    margin: 0 auto;
+    max-width: 660px;
+    font-size: clamp(1.06rem, 2.2vw, 1.3rem);
+    color: var(--muted);
+    letter-spacing: -0.01em;
+  }
+
+  section { padding: 44px 0; border-top: 1px solid var(--line); }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+  }
+
+  .lead { margin: 0 0 28px; color: var(--muted); font-size: 1.02rem; max-width: 720px; }
+
+  h3 {
+    margin: 34px 0 10px;
+    font-size: 1.18rem;
+    letter-spacing: -0.015em;
+  }
+
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  .tldr {
+    background: var(--bg-soft);
+    border-radius: var(--radius);
+    padding: 28px 30px;
+    margin: 8px 0 8px;
+  }
+
+  .tldr h3 { margin-top: 0; }
+  .tldr ul { margin-bottom: 0; }
+
+  /* Request flow */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 8px 0 14px;
+    scrollbar-width: thin;
+  }
+
+  .flow-step {
+    flex: 1 0 148px;
+    background: var(--bg-soft);
+    border: 1px solid transparent;
+    border-radius: 16px;
+    padding: 16px 16px 18px;
+    min-width: 148px;
+  }
+
+  .flow-step .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--text);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .flow-step strong { display: block; font-size: 0.95rem; letter-spacing: -0.01em; }
+  .flow-step span { display: block; margin-top: 4px; color: var(--muted); font-size: 0.82rem; }
+
+  .arrow {
+    align-self: center;
+    color: var(--line);
+    font-size: 20px;
+    flex: 0 0 auto;
+  }
+
+  /* Files table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+
+  th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+
+  th { background: var(--bg-soft); font-weight: 600; white-space: nowrap; }
+
+  tr:last-child td { border-bottom: none; }
+
+  code {
+    font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--bg-soft);
+    border-radius: 5px;
+    padding: 2px 5px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  .badge.new { background: var(--green-soft); color: var(--green); }
+  .badge.edit { background: var(--amber-soft); color: var(--amber); }
+
+  /* Code blocks */
+  .code {
+    position: relative;
+    background: var(--bg-code);
+    color: #f5f5f7;
+    border-radius: 16px;
+    padding: 20px 22px;
+    overflow-x: auto;
+    margin: 14px 0 22px;
+    font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.62;
+    tab-size: 2;
+    white-space: pre;
+  }
+
+  .code .file {
+    display: block;
+    color: #8e8e93;
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    user-select: none;
+  }
+
+  .code .c { color: #8e8e93; }
+  .code .k { color: #ff9f0a; }
+  .code .s { color: #7ee787; }
+  .code .f { color: #79c0ff; }
+
+  /* Callouts */
+  .note {
+    border-left: 4px solid var(--blue);
+    background: var(--blue-soft);
+    border-radius: 0 14px 14px 0;
+    padding: 18px 22px;
+    margin: 18px 0;
+  }
+
+  .note.warn { border-color: #d97706; background: var(--amber-soft); }
+  .note.good { border-color: var(--green); background: var(--green-soft); }
+  .note p:last-child { margin-bottom: 0; }
+  .note strong { letter-spacing: -0.01em; }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin: 22px 0;
+  }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px;
+    background: #fff;
+  }
+
+  .card h4 { margin: 0 0 8px; font-size: 1.02rem; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+  /* Compare */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+
+  .compare > div { border-radius: 18px; padding: 22px; border: 1px solid var(--line); }
+
+  .compare h4 { margin: 0 0 10px; font-size: 1rem; }
+  .compare ul { margin: 0; padding-left: 20px; font-size: 0.92rem; color: var(--muted); }
+
+  /* Q&A */
+  details {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin: 10px 0;
+    background: #fff;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "+"; color: var(--muted); margin-right: 10px; }
+  details[open] summary::before { content: "−"; }
+
+  details p { margin: 12px 0 0; color: var(--muted); }
+
+  .next {
+    background: linear-gradient(135deg, #0071e3, #42a5f5);
+    color: #fff;
+    border-radius: 24px;
+    padding: 34px 36px;
+    margin-top: 20px;
+  }
+
+  .next h2 { margin-top: 0; color: #fff; }
+  .next p { color: rgba(255, 255, 255, 0.88); margin-bottom: 8px; }
+  .next code { background: rgba(255,255,255,0.16); color: #fff; }
+
+  .footer {
+    padding-top: 40px;
+    color: var(--muted);
+    font-size: 0.86rem;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .hero { padding: 60px 0 36px; }
+    .compare { grid-template-columns: 1fr; }
+    .nav-inner { font-size: 12px; }
+    section { padding: 34px 0; }
+    .next { padding: 26px 24px; }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --bg-soft: #161617;
+      --text: #f5f5f7;
+      --muted: #a1a1a6;
+      --line: #2d2d2f;
+      --blue: #2997ff;
+      --blue-soft: #0d2942;
+      --green-soft: #0d2b1b;
+      --red-soft: #3a1414;
+      --amber-soft: #33260d;
+    }
+    .nav { background: rgba(0, 0, 0, 0.72); border-bottom-color: rgba(255,255,255,0.12); }
+    .card, details { background: #0a0a0a; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <span class="nav-title">S1 · Account &amp; Trial</span>
+    <span class="nav-meta">M2.2 · Đăng ký tài khoản</span>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">AuthModule · Register</span>
+    <h1>Đăng ký tài khoản,<br />hiểu từng bước.</h1>
+    <p>Một request đăng ký đi qua validation, chuẩn hóa email, hash mật khẩu và PostgreSQL. Tài liệu này giải thích vì sao mỗi bước tồn tại.</p>
+  </header>
+
+  <section>
+    <h2>Tóm tắt nhanh</h2>
+    <div class="tldr">
+      <ul>
+        <li>Thêm endpoint <code>POST /api/auth/register</code> cho S1.</li>
+        <li>Email được <strong>chuẩn hóa</strong> (trim + lowercase) trước khi lưu để tránh trùng tài khoản.</li>
+        <li>Mật khẩu được hash bằng <strong>bcrypt</strong> (12 rounds); DB không bao giờ thấy mật khẩu gốc.</li>
+        <li>Trùng email trả <code>409 EMAIL_ALREADY_EXISTS</code>, dữ liệu sai trả <code>400 VALIDATION_ERROR</code>.</li>
+        <li>Đã test thành công qua gateway <code>http://localhost:8080</code> và kiểm tra trực tiếp trong PostgreSQL.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Một request đi qua đâu?</h2>
+    <p class="lead">Đây là toàn bộ đường đi của lệnh đăng ký. Mỗi ô là một lớp có nhiệm vụ riêng.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <span class="num">1</span>
+        <strong>Client</strong>
+        <span>gửi JSON email + password</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-step">
+        <span class="num">2</span>
+        <strong>NGINX :8080</strong>
+        <span>route <code>/api/auth/*</code> vào S1</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-step">
+        <span class="num">3</span>
+        <strong>ValidationPipe</strong>
+        <span>kiểm tra định dạng DTO</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-step">
+        <span class="num">4</span>
+        <strong>AuthService</strong>
+        <span>chuẩn hóa + hash mật khẩu</span>
+      </div>
+      <div class="arrow">→</div>
+      <div class="flow-step">
+        <span class="num">5</span>
+        <strong>PostgreSQL</strong>
+        <span>INSERT vào bảng accounts</span>
+      </div>
+    </div>
+
+    <div class="note">
+      <p><strong>Vì sao validation đứng trước service?</strong> Dữ liệu sai bị chặn ngay cửa, không tốn CPU để hash mật khẩu và không tạo request rác vào database.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Những file đã tạo và sửa</h2>
+    <p class="lead">Toàn bộ thay đổi nằm trong <code>apps/account-trial-service</code>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Loại</th>
+            <th>Nhiệm vụ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/auth/dto/register.dto.ts</code></td>
+            <td><span class="badge new">Mới</span></td>
+            <td>Khai báo hình dạng body và luật validate email/mật khẩu.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.service.ts</code></td>
+            <td><span class="badge new">Mới</span></td>
+            <td>Chuẩn hóa email, hash mật khẩu, ghi DB, đổi lỗi P2002 thành 409.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.controller.ts</code></td>
+            <td><span class="badge new">Mới</span></td>
+            <td>Nhận HTTP request tại <code>POST /api/auth/register</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.module.ts</code></td>
+            <td><span class="badge new">Mới</span></td>
+            <td>Gom controller + service thành một module.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/auth.service.spec.ts</code></td>
+            <td><span class="badge new">Mới</span></td>
+            <td>Unit test: chuẩn hóa email, hash đúng, trùng email trả 409.</td>
+          </tr>
+          <tr>
+            <td><code>src/main.ts</code></td>
+            <td><span class="badge edit">Sửa</span></td>
+            <td>Bật <code>ValidationPipe</code> toàn cục, chuẩn hóa format lỗi 400.</td>
+          </tr>
+          <tr>
+            <td><code>src/app.module.ts</code></td>
+            <td><span class="badge edit">Sửa</span></td>
+            <td>Import <code>AuthModule</code> để NestJS nạp route mới.</td>
+          </tr>
+          <tr>
+            <td><code>package.json</code></td>
+            <td><span class="badge edit">Sửa</span></td>
+            <td>Thêm <code>bcryptjs</code>, <code>class-validator</code>, <code>class-transformer</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bước 1 — Chặn dữ liệu sai bằng DTO</h2>
+    <p class="lead">DTO (Data Transfer Object) là bản mô tả “body hợp lệ trông như thế nào”. ValidationPipe đọc các decorator để kiểm tra.</p>
+
+    <div class="code"><span class="file">src/auth/dto/register.dto.ts</span><span class="k">import</span> { IsEmail, IsString, MaxLength, MinLength } <span class="k">from</span> <span class="s">'class-validator'</span>;
+
+<span class="k">export class</span> <span class="f">RegisterDto</span> {
+  @<span class="f">IsEmail</span>({}, { message: <span class="s">'Email không hợp lệ'</span> })
+  @<span class="f">MaxLength</span>(<span class="s">254</span>, { message: <span class="s">'Email quá dài'</span> })
+  email!: <span class="k">string</span>;
+
+  @<span class="f">IsString</span>({ message: <span class="s">'Mật khẩu phải là chuỗi'</span> })
+  @<span class="f">MinLength</span>(<span class="s">8</span>, { message: <span class="s">'Mật khẩu phải có ít nhất 8 ký tự'</span> })
+  @<span class="f">MaxLength</span>(<span class="s">72</span>, { message: <span class="s">'Mật khẩu không được quá 72 ký tự'</span> })
+  password!: <span class="k">string</span>;
+}</div>
+
+    <h3>Vì sao giới hạn 72 ký tự?</h3>
+    <p>bcrypt chỉ xử lý tối đa 72 <em>byte</em> đầu vào. Ký tự tiếng Việt có thể chiếm nhiều byte, nên giới hạn ở mức ký tự giúp tránh trường hợp người dùng tưởng mật khẩu dài nhưng phần sau bị bỏ qua.</p>
+
+    <div class="note warn">
+      <p><strong>Lưu ý:</strong> giới hạn 72 ký tự là chặn ở mức ký tự, chưa quy đổi sang byte. Với mật khẩu thuần ASCII thì hoàn toàn chính xác; nếu cần chặt hơn, có thể kiểm tra <code>Buffer.byteLength()</code> trong service.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bước 2 — Controller chỉ làm một việc</h2>
+    <p class="lead">Controller nhận request và chuyển cho service. Không hash, không query DB — nhờ vậy dễ test và dễ đọc.</p>
+
+    <div class="code"><span class="file">src/auth/auth.controller.ts</span>@<span class="f">Controller</span>(<span class="s">'api/auth'</span>)
+<span class="k">export class</span> <span class="f">AuthController</span> {
+  <span class="f">constructor</span>(<span class="k">private readonly</span> authService: AuthService) {}
+
+  @<span class="f">Post</span>(<span class="s">'register'</span>)
+  @<span class="f">HttpCode</span>(HttpStatus.CREATED)
+  <span class="f">register</span>(@<span class="f">Body</span>() dto: RegisterDto): Promise&lt;RegisterResult&gt; {
+    <span class="k">return</span> <span class="k">this</span>.authService.<span class="f">register</span>(dto);
+  }
+}</div>
+
+    <h3>Vì sao đường dẫn là <code>api/auth</code>?</h3>
+    <p>NGINX đang chuyển nguyên path <code>/api/auth/register</code> vào service mà không cắt tiền tố. Vì vậy controller phải khai báo đầy đủ <code>api/auth</code> để khớp cấu hình hiện tại.</p>
+  </section>
+
+  <section>
+    <h2>Bước 3 — Service: chuẩn hóa, hash, lưu</h2>
+    <p class="lead">Đây là nơi chứa toàn bộ logic nghiệp vụ. Ba việc quan trọng nhất được giải thích ngay bên dưới.</p>
+
+    <div class="code"><span class="file">src/auth/auth.service.ts (rút gọn)</span><span class="k">async</span> <span class="f">register</span>(dto: RegisterDto): Promise&lt;RegisterResult&gt; {
+  <span class="c">// 1. Chuẩn hóa email</span>
+  <span class="k">const</span> emailNormalized = dto.email.<span class="f">trim</span>().<span class="f">toLowerCase</span>();
+  <span class="k">const</span> emailDomainKey = emailNormalized.<span class="f">split</span>(<span class="s">'@'</span>)[<span class="s">1</span>] ?? <span class="s">''</span>;
+
+  <span class="c">// 2. Hash mật khẩu</span>
+  <span class="k">const</span> passwordHash = <span class="k">await</span> <span class="f">hash</span>(dto.password, BCRYPT_ROUNDS);
+
+  <span class="c">// 3. Ghi DB + bắt lỗi trùng unique</span>
+  <span class="k">try</span> {
+    <span class="k">const</span> account = <span class="k">await</span> <span class="k">this</span>.prisma.account.<span class="f">create</span>({ ... });
+    <span class="k">return</span> { userId: account.userId, email: account.emailNormalized, ... };
+  } <span class="k">catch</span> (error) {
+    <span class="k">if</span> (error <span class="k">instanceof</span> Prisma.PrismaClientKnownRequestError &amp;&amp; error.code === <span class="s">'P2002'</span>) {
+      <span class="k">throw new</span> <span class="f">ConflictException</span>({
+        code: <span class="s">'EMAIL_ALREADY_EXISTS'</span>,
+        message: <span class="s">'Email đã được đăng ký'</span>,
+      });
+    }
+    <span class="k">throw</span> error;
+  }
+}</div>
+
+    <h3>Vì sao chuẩn hóa email?</h3>
+    <p>Người dùng rất hay gõ <code>Alice@Example.com</code> và <code>alice@example.com</code>. Nếu lưu nguyên, hệ thống tạo hai tài khoản cho cùng một người — vừa sai nghiệp vụ, vừa mở đường cho gian lận multi-account. Chuẩn hóa về lowercase + trim biến hai chuỗi trên thành một.</p>
+
+    <h3>Vì sao lưu thêm <code>email_domain_key</code>?</h3>
+    <p>Đây là <strong>dấu vân tay domain</strong>, ví dụ <code>example.com</code>. S2 (Graph &amp; Risk) dùng nó để phát hiện một loạt tài khoản cùng domain đăng ký trong thời gian ngắn — một tín hiệu gian lận phổ biến. Nếu chỉ lưu email đầy đủ, mỗi lần phát hiện phải cắt chuỗi; lưu sẵn giúp truy vấn nhanh và rõ nghĩa.</p>
+
+    <h3>Vì sao hash mật khẩu?</h3>
+    <p>Hash là hàm một chiều: từ mật khẩu tính ra chuỗi <code>$2b$12$...</code>, nhưng từ chuỗi đó gần như không thể suy ngược lại mật khẩu. Nếu database bị lộ, kẻ tấn công chỉ thấy hash. bcrypt còn cố tình chậm (12 rounds ≈ 250–400ms mỗi lần) để việc dò hàng tỷ mật khẩu trở nên quá đắt.</p>
+
+    <h3>Vì sao bắt lỗi P2002 thay vì kiểm tra trước?</h3>
+    <p>Có thể viết “tìm email → nếu chưa có thì tạo”. Nhưng hai request cùng email chạy song song có thể cùng lọt qua bước tìm. Database mới là nơi phân xử cuối cùng nhờ ràng buộc <code>UNIQUE</code>. Bắt lỗi <code>P2002</code> (unique constraint) vừa chính xác vừa tránh thêm một vòng query.</p>
+
+    <div class="note good">
+      <p><strong>Nguyên tắc:</strong> kiểm tra ở tầng ứng dụng để báo lỗi đẹp, nhưng luôn để database làm chốt chặn cuối.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Bước 4 — Bật ValidationPipe toàn cục</h2>
+    <p class="lead">Một dòng cấu hình trong <code>main.ts</code> khiến mọi DTO trong service được kiểm tra tự động.</p>
+
+    <div class="code"><span class="file">src/main.ts</span>app.<span class="f">useGlobalPipes</span>(
+  <span class="k">new</span> <span class="f">ValidationPipe</span>({
+    whitelist: <span class="k">true</span>,
+    transform: <span class="k">true</span>,
+    exceptionFactory: (errors) =&gt;
+      <span class="k">new</span> <span class="f">BadRequestException</span>({
+        code: <span class="s">'VALIDATION_ERROR'</span>,
+        message: <span class="s">'Dữ liệu không hợp lệ'</span>,
+        details: errors.<span class="f">map</span>((error) =&gt; ({
+          field: error.property,
+          errors: Object.<span class="f">values</span>(error.constraints ?? {}),
+        })),
+      }),
+  }),
+);</div>
+
+    <div class="cards">
+      <div class="card">
+        <h4><code>whitelist: true</code></h4>
+        <p>Field lạ không khai báo trong DTO bị loại bỏ. Tránh việc client gửi thêm <code>role: "ADMIN"</code>.</p>
+      </div>
+      <div class="card">
+        <h4><code>transform: true</code></h4>
+        <p>Tự chuyển body JSON thành instance của DTO để decorator hoạt động đúng kiểu.</p>
+      </div>
+      <div class="card">
+        <h4><code>exceptionFactory</code></h4>
+        <p>Đổi lỗi mặc định thành cùng format <code>{ code, message, details }</code> với lỗi nghiệp vụ.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kết quả thực tế</h2>
+    <p class="lead">Đã chạy qua gateway và kiểm tra dữ liệu trong PostgreSQL.</p>
+
+    <h3>1. Đăng ký thành công — 201</h3>
+    <div class="code"><span class="file">POST /api/auth/register</span>{
+  <span class="s">"email"</span>: <span class="s">"Alice@Example.com"</span>,
+  <span class="s">"password"</span>: <span class="s">"mat-khau-123"</span>
+}
+
+<span class="c">→ 201 Created</span>
+{
+  <span class="s">"userId"</span>: <span class="s">"3d829d22-ccf2-45a7-b8f7-45af44f26b63"</span>,
+  <span class="s">"email"</span>: <span class="s">"alice@example.com"</span>,
+  <span class="s">"role"</span>: <span class="s">"USER"</span>,
+  <span class="s">"createdAt"</span>: <span class="s">"2026-11-06T08:21:41.371Z"</span>
+}</div>
+
+    <h3>2. Đăng ký trùng email — 409</h3>
+    <div class="code">{
+  <span class="s">"code"</span>: <span class="s">"EMAIL_ALREADY_EXISTS"</span>,
+  <span class="s">"message"</span>: <span class="s">"Email đã được đăng ký"</span>
+}</div>
+
+    <h3>3. Dữ liệu sai — 400</h3>
+    <div class="code">{
+  <span class="s">"code"</span>: <span class="s">"VALIDATION_ERROR"</span>,
+  <span class="s">"message"</span>: <span class="s">"Dữ liệu không hợp lệ"</span>,
+  <span class="s">"details"</span>: [
+    { <span class="s">"field"</span>: <span class="s">"email"</span>, <span class="s">"errors"</span>: [<span class="s">"Email không hợp lệ"</span>] },
+    { <span class="s">"field"</span>: <span class="s">"password"</span>, <span class="s">"errors"</span>: [<span class="s">"Mật khẩu phải có ít nhất 8 ký tự"</span>] }
+  ]
+}</div>
+
+    <h3>4. Kiểm tra trong database</h3>
+    <div class="code">SELECT email_normalized, email_domain_key, left(password_hash, 7), role
+FROM accounts;
+
+ alice@example.com | example.com | $2b$12$ | USER</div>
+    <p>Chuỗi <code>$2b$12$</code> cho biết: bcrypt phiên bản 2b, độ khó 12 rounds. Mật khẩu gốc không xuất hiện ở bất kỳ đâu.</p>
+  </section>
+
+  <section>
+    <h2>Lệnh tự chạy lại</h2>
+    <p class="lead">Từ thư mục gốc repo:</p>
+
+    <div class="code"><span class="c"># Build lại container S1 sau khi sửa code</span>
+docker compose up -d --build account-trial
+
+<span class="c"># Đăng ký</span>
+curl -i -X POST http://localhost:8080/api/auth/register \
+  -H <span class="s">'Content-Type: application/json'</span> \
+  -d <span class="s">'{"email":"bob@example.com","password":"mat-khau-123"}'</span>
+
+<span class="c"># Xem tài khoản trong DB</span>
+docker compose exec postgres psql -U account_svc -d account_trial_db \
+  -c <span class="s">"SELECT email_normalized, email_domain_key, left(password_hash, 7) FROM accounts;"</span></div>
+
+    <div class="note warn">
+      <p><strong>Lỗi thường gặp:</strong> nếu gọi <code>localhost:8080</code> mà nhận 404, kiểm tra container đã rebuild chưa. Image cũ không có route mới. Nếu nhận 500, xem log bằng <code>docker compose logs -f account-trial</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Vì sao chọn bcryptjs?</h2>
+
+    <div class="compare">
+      <div>
+        <h4>bcrypt (native)</h4>
+        <ul>
+          <li>Nhanh hơn</li>
+          <li>Cần biên dịch C++ khi cài</li>
+          <li>Dễ lỗi trong Docker slim nếu thiếu build tools</li>
+        </ul>
+      </div>
+      <div>
+        <h4>bcryptjs (đang dùng)</h4>
+        <ul>
+          <li>Thuần JavaScript, cài là chạy</li>
+          <li>Không cần compiler trong image</li>
+          <li>Chậm hơn một chút — không đáng kể với đăng ký</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>Với đồ án 8 tuần, ưu tiên <strong>chạy ổn định trên mọi máy</strong> quan trọng hơn vài mili-giây. Nếu sau này cần tối ưu, có thể đổi sang <code>argon2</code> hoặc <code>bcrypt</code> native mà không đổi logic nghiệp vụ.</p>
+
+    <div class="note">
+      <p><strong>Ghi chú thiết kế:</strong> bản thiết kế trước ghi Argon2id. Nhóm đã chốt dùng <strong>bcrypt 12 rounds</strong> cho MVP vì <code>bcryptjs</code> không cần biên dịch native trong Docker. Đánh đổi: Argon2id kháng GPU/ASIC tốt hơn; có thể chuyển sau mà không đổi schema hay API.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Những gì chưa làm</h2>
+    <ul>
+      <li><strong>Đăng nhập + JWT:</strong> hiện chỉ có đăng ký, chưa phát token.</li>
+      <li><strong>Xác thực email:</strong> cột <code>email_verified</code> đang mặc định <code>false</code>, chưa có luồng gửi OTP.</li>
+      <li><strong>Rate limit:</strong> chưa chặn spam đăng ký; có thể thêm ở gateway hoặc service sau.</li>
+      <li><strong>Kiểm tra độ mạnh mật khẩu:</strong> hiện chỉ yêu cầu 8 ký tự, chưa bắt buộc chữ hoa/số.</li>
+    </ul>
+    <p>Đây là chủ ý để giữ bước nhỏ, chạy được trước rồi mở rộng.</p>
+  </section>
+
+  <section>
+    <h2>Câu hỏi có thể bị hỏi khi bảo vệ</h2>
+
+    <details>
+      <summary>Vì sao không lưu mật khẩu trực tiếp?</summary>
+      <p>Vì database có thể bị lộ hoặc bị admin xem. Hash một chiều đảm bảo lộ DB không đồng nghĩa lộ mật khẩu. bcrypt còn thêm salt tự động, nên hai người cùng mật khẩu vẫn có hash khác nhau.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao dùng 12 rounds mà không phải 4 hay 20?</summary>
+      <p>4 rounds quá nhanh, dễ bị brute-force. 20 rounds quá chậm, làm đăng ký/đăng nhập chờ lâu. 12 là mức cân bằng phổ biến hiện nay, mỗi lần hash mất khoảng 250–400ms trên máy dev.</p>
+    </details>
+
+    <details>
+      <summary>Nếu hai người đăng ký cùng email cùng lúc thì sao?</summary>
+      <p>Một request sẽ thắng và tạo tài khoản. Request còn lại bị PostgreSQL chặn bởi ràng buộc <code>UNIQUE(email_normalized)</code>, Prisma trả mã <code>P2002</code>, service đổi thành HTTP 409. Không có tài khoản trùng.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao response không trả <code>passwordHash</code>?</summary>
+      <p>Nguyên tắc tối thiểu dữ liệu: client không cần hash để làm gì. Trả về chỉ làm tăng nguy cơ rò rỉ qua log, cache hoặc DevTools.</p>
+    </details>
+
+    <details>
+      <summary>Email có dấu tiếng Việt thì sao?</summary>
+      <p><code>toLowerCase()</code> xử lý được chữ có dấu. Tuy nhiên chuẩn email quốc tế (EAI) phức tạp hơn; với phạm vi đồ án, chuẩn hóa trim + lowercase là đủ và nhất quán.</p>
+    </details>
+  </section>
+
+  <section>
+    <div class="next">
+      <h2>Bước tiếp theo</h2>
+      <p><strong>M2.2 bước 3 — Đăng nhập và JWT.</strong></p>
+      <p>Thêm <code>POST /api/auth/login</code>: so sánh mật khẩu bằng <code>bcrypt.compare</code>, phát JWT chứa <code>userId</code> và <code>role</code>, rồi dùng guard để bảo vệ các route cần đăng nhập.</p>
+      <p>Nguyên tắc giữ nguyên: làm một endpoint nhỏ, test bằng <code>curl</code>, rồi mới mở rộng.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    S1 — Account &amp; Trial · Tài liệu giải thích · Cập nhật 06/11/2026
+  </div>
+
+</div>
+</body>
+</html>

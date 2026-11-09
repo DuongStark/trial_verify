@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JwtAuthGuard &amp; /api/users/me — S1</title>
+<style>
+  :root {
+    --bg: #313338;
+    --rail: #1e1f22;
+    --sidebar: #2b2d31;
+    --panel: #2b2d31;
+    --panel-2: #232428;
+    --code: #1e1f22;
+    --text: #f2f3f5;
+    --muted: #b5bac1;
+    --faint: #949ba4;
+    --border: #3f4147;
+    --blurple: #5865f2;
+    --blurple-soft: rgba(88, 101, 242, 0.15);
+    --green: #23a55a;
+    --green-soft: rgba(35, 165, 90, 0.12);
+    --red: #f23f43;
+    --red-soft: rgba(242, 63, 67, 0.12);
+    --yellow: #f0b232;
+    --yellow-soft: rgba(240, 178, 50, 0.12);
+    --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: #00a8fc; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 72px 248px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  /* Server rail */
+  .rail {
+    background: var(--rail);
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .rail-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: var(--blurple);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+
+  .rail-sep {
+    width: 32px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 2px 0;
+  }
+
+  .rail-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--sidebar);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  /* Channel sidebar */
+  .sidebar {
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .server-name {
+    font-weight: 700;
+    font-size: 15px;
+    padding: 6px 8px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .server-name span { color: var(--faint); font-size: 12px; font-weight: 500; }
+
+  .channel-group {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--faint);
+    font-weight: 700;
+    padding: 12px 8px 4px;
+  }
+
+  .channel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .channel .hash { color: var(--faint); font-size: 17px; }
+
+  .channel.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .channel:hover { background: rgba(255, 255, 255, 0.04); }
+
+  /* Main */
+  .main { min-width: 0; display: flex; flex-direction: column; }
+
+  .main-head {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(49, 51, 56, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .main-head .title { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+  .main-head .title .hash { color: var(--faint); font-size: 22px; }
+  .main-head .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .content {
+    padding: 32px 40px 80px;
+    max-width: 920px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .hero { padding-bottom: 26px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--blurple-soft);
+    color: #c9cdfb;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 14px;
+  }
+
+  .eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blurple); }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+
+  .hero p { margin: 0 0 18px; color: var(--muted); font-size: 1.05rem; max-width: 720px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .chip.green { color: #57f287; border-color: rgba(35,165,90,.45); background: var(--green-soft); }
+  .chip.red { color: #ff8a8e; border-color: rgba(242,63,67,.45); background: var(--red-soft); }
+  .chip.blurple { color: #c9cdfb; border-color: rgba(88,101,242,.5); background: var(--blurple-soft); }
+
+  section { padding: 30px 0; border-bottom: 1px solid rgba(63,65,71,.55); }
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 1.4rem;
+    letter-spacing: -0.015em;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h2 .hash { color: var(--faint); font-weight: 500; }
+
+  .sub { margin: 0 0 20px; color: var(--faint); font-size: 0.94rem; }
+
+  h3 { margin: 26px 0 8px; font-size: 1.05rem; font-weight: 700; }
+  p { margin: 0 0 13px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 5px 0; }
+
+  code {
+    background: rgba(30, 31, 34, 0.7);
+    border: 1px solid rgba(63,65,71,.6);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: var(--mono);
+    font-size: 0.85em;
+    color: #dbdee1;
+  }
+
+  /* Discord-style message */
+  .msg {
+    display: flex;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    margin: 10px 0;
+  }
+
+  .msg:hover { background: rgba(0, 0, 0, 0.12); }
+
+  .avatar {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .avatar.b { background: #5865f2; }
+  .avatar.g { background: #23a55a; }
+  .avatar.r { background: #f23f43; }
+  .avatar.y { background: #b58100; }
+
+  .msg-body { min-width: 0; }
+  .msg-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+  .msg-head strong { font-weight: 700; }
+  .msg-head time { color: var(--faint); font-size: 11px; }
+  .msg-body p { margin: 0 0 6px; color: #dbdee1; font-size: 0.96rem; }
+  .msg-body p:last-child { margin-bottom: 0; }
+  .msg-body code { font-size: 0.82em; }
+
+  /* Alerts */
+  .note {
+    border-left: 4px solid var(--blurple);
+    background: var(--blurple-soft);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 0.95rem;
+  }
+
+  .note .head { font-weight: 800; color: #c9cdfb; margin-bottom: 4px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note.green { border-color: var(--green); background: var(--green-soft); }
+  .note.green .head { color: #57f287; }
+  .note.red { border-color: var(--red); background: var(--red-soft); }
+  .note.red .head { color: #ff8a8e; }
+  .note.yellow { border-color: var(--yellow); background: var(--yellow-soft); }
+  .note.yellow .head { color: #f0b232; }
+
+  /* Code block */
+  .code {
+    background: var(--code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: 14px 0 22px;
+    overflow: hidden;
+  }
+
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .code-head .name { color: var(--text); }
+  .code-head .lang { font-size: 11px; }
+
+  .code pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 0.81rem;
+    line-height: 1.65;
+    tab-size: 2;
+    color: #dbdee1;
+  }
+
+  .c { color: #949ba4; }
+  .k { color: #ff7b72; }
+  .s { color: #a5d6ff; }
+  .f { color: #d2a8ff; }
+  .n { color: #79c0ff; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--panel-2); font-weight: 700; white-space: nowrap; color: var(--muted); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(0,0,0,.12); }
+
+  /* Q&A */
+  details {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin: 8px 0;
+  }
+
+  summary { cursor: pointer; font-weight: 700; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--faint); margin-right: 8px; display: inline-block; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details p { margin: 10px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+  .next {
+    background: linear-gradient(135deg, rgba(88,101,242,.22), rgba(88,101,242,.08));
+    border: 1px solid rgba(88,101,242,.45);
+    border-radius: 16px;
+    padding: 24px;
+    margin-top: 20px;
+  }
+
+  .next h2 { font-size: 1.2rem; margin-bottom: 8px; }
+  .next p { color: var(--muted); margin-bottom: 8px; }
+  .next p:last-child { margin-bottom: 0; }
+
+  .footer {
+    margin-top: 30px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--faint);
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 60px minmax(0, 1fr); }
+    .sidebar { display: none; }
+    .content { padding: 24px 20px 60px; }
+    .main-head { padding: 10px 18px; }
+  }
+
+  @media (max-width: 560px) {
+    .shell { grid-template-columns: 1fr; }
+    .rail { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="rail-logo">S1</div>
+    <div class="rail-sep"></div>
+    <div class="rail-icon">auth</div>
+    <div class="rail-icon">user</div>
+    <div class="rail-icon">trial</div>
+  </aside>
+
+  <aside class="sidebar">
+    <div class="server-name">S1 Account <span>docs</span></div>
+    <div class="channel-group">Tài liệu</div>
+    <div class="channel active"><span class="hash">#</span> auth-guard</div>
+    <div class="channel"><span class="hash">#</span> users-me</div>
+    <div class="channel"><span class="hash">#</span> test-results</div>
+    <div class="channel-group">Liên quan</div>
+    <div class="channel"><span class="hash">#</span> login-jwt</div>
+    <div class="channel"><span class="hash">#</span> register</div>
+  </aside>
+
+  <main class="main">
+    <div class="main-head">
+      <div class="title"><span class="hash">#</span> auth-guard</div>
+      <div class="meta">
+        <span class="chip green">13 tests pass</span>
+        <span class="chip">08/11/2026</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <header class="hero">
+        <span class="eyebrow"><span class="dot"></span> BẢO VỆ ROUTE</span>
+        <h1>JwtAuthGuard &amp; <code>/api/users/me</code></h1>
+        <p>Guard đọc <code>Authorization: Bearer &lt;token&gt;</code>, kiểm tra chữ ký và hạn dùng, rồi gắn user vào request. Route <code>/me</code> trả hồ sơ của chính người đang đăng nhập.</p>
+        <div class="chips">
+          <span class="chip green">200 có token</span>
+          <span class="chip red">401 thiếu token</span>
+          <span class="chip red">401 token sai</span>
+          <span class="chip blurple">CanActivate</span>
+          <span class="chip">@UseGuards</span>
+        </div>
+      </header>
+
+      <section>
+        <h2><span class="hash">#</span> Tóm tắt</h2>
+        <p class="sub">Điều gì đã thay đổi và vì sao.</p>
+        <div class="note">
+          <div class="head">Đã xong</div>
+          <p>Thêm <code>JwtAuthGuard</code> để chặn request không có token hợp lệ. Thêm <code>GET /api/users/me</code> trả <code>userId</code>, <code>email</code>, <code>role</code>, <code>status</code>, <code>emailVerified</code>, <code>createdAt</code>. Không trả <code>passwordHash</code>.</p>
+        </div>
+        <div class="note yellow">
+          <div class="head">Chưa làm</div>
+          <p>Chưa có role guard cho ADMIN, chưa thu hồi token, chưa kiểm tra tài khoản bị khóa trong guard. Những phần đó để bước sau.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Request đi qua guard thế nào?</h2>
+        <p class="sub">Guard chạy trước khi vào controller.</p>
+
+        <div class="msg">
+          <div class="avatar b">1</div>
+          <div class="msg-body">
+            <div class="msg-head"><strong>Client</strong><time>hôm nay</time></div>
+            <p>Gửi <code>GET /api/users/me</code> kèm header <code>Authorization: Bearer eyJ...</code>.</p>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar b">2</div>
+          <div class="msg-body">
+            <div class="msg-head"><strong>JwtAuthGuard</strong><time>hôm nay</time></div>
+            <p>Tách header thành hai phần: scheme <code>Bearer</code> và token. Nếu thiếu hoặc sai scheme → <code>401 AUTH_TOKEN_MISSING</code>.</p>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar b">3</div>
+          <div class="msg-body">
+            <div class="msg-head"><strong>JwtService.verifyAsync</strong><time>hôm nay</time></div>
+            <p>Kiểm tra chữ ký bằng <code>JWT_SECRET</code> và thời hạn <code>exp</code>. Sai chữ ký hoặc hết hạn → <code>401 AUTH_TOKEN_INVALID</code>.</p>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar g">4</div>
+          <div class="msg-body">
+            <div class="msg-head"><strong>Guard cho đi tiếp</strong><time>hôm nay</time></div>
+            <p>Gắn payload vào <code>request.user</code>, trả <code>true</code>. Nest mới gọi vào controller.</p>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="avatar g">5</div>
+          <div class="msg-body">
+            <div class="msg-head"><strong>UsersController + UsersService</strong><time>hôm nay</time></div>
+            <p><code>@CurrentUser()</code> lấy payload, dùng <code>sub</code> (userId) query DB và trả hồ sơ đã lọc.</p>
+          </div>
+        </div>
+
+        <div class="code">
+          <div class="code-head"><span class="name">Luồng ngắn</span><span class="lang">text</span></div>
+<pre>Authorization: Bearer &lt;token&gt;
+        │
+        ▼
+JwtAuthGuard.canActivate()
+        │  thiếu / sai định dạng → 401 AUTH_TOKEN_MISSING
+        ▼
+JwtService.verifyAsync(token)
+        │  sai chữ ký / hết hạn → 401 AUTH_TOKEN_INVALID
+        ▼
+request.user = { sub, role, iat, exp }
+        │
+        ▼
+@CurrentUser() → user.sub
+        │
+        ▼
+UsersService.getProfile(userId)
+        │
+        ▼
+200 { userId, email, role, status, emailVerified, createdAt }</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> File đã tạo và sửa</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>File</th><th>Loại</th><th>Nhiệm vụ</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/auth/auth.types.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td>Định nghĩa <code>JwtPayload</code>: <code>sub</code>, <code>role</code>, <code>iat</code>, <code>exp</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/auth/jwt-auth.guard.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td>Tách Bearer token, verify, gắn user vào request, ném 401 khi sai.</td>
+              </tr>
+              <tr>
+                <td><code>src/auth/current-user.decorator.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td><code>@CurrentUser()</code> lấy payload đã gắn trong request.</td>
+              </tr>
+              <tr>
+                <td><code>src/users/users.module.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td>Gom controller + service, import <code>AuthModule</code> để dùng guard.</td>
+              </tr>
+              <tr>
+                <td><code>src/users/users.controller.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td><code>GET /api/users/me</code> với <code>@UseGuards(JwtAuthGuard)</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/users/users.service.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td>Query hồ sơ theo userId, trả 404 nếu không còn tồn tại.</td>
+              </tr>
+              <tr>
+                <td><code>src/auth/auth.module.ts</code></td>
+                <td><span class="chip yellow">sửa</span></td>
+                <td>Provider + export <code>JwtAuthGuard</code>, export <code>JwtModule</code>.</td>
+              </tr>
+              <tr>
+                <td><code>src/app.module.ts</code></td>
+                <td><span class="chip yellow">sửa</span></td>
+                <td>Import <code>UsersModule</code>.</td>
+              </tr>
+              <tr>
+                <td><code>jwt-auth.guard.spec.ts</code>, <code>users.service.spec.ts</code></td>
+                <td><span class="chip green">mới</span></td>
+                <td>6 test cho guard và service.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Guard hoạt động thế nào?</h2>
+
+        <div class="code">
+          <div class="code-head"><span class="name">src/auth/jwt-auth.guard.ts</span><span class="lang">TypeScript</span></div>
+<pre><span class="k">@Injectable</span>()
+<span class="k">export class</span> <span class="f">JwtAuthGuard</span> <span class="k">implements</span> CanActivate {
+  <span class="f">constructor</span>(<span class="k">private readonly</span> jwtService: JwtService) {}
+
+  <span class="k">async</span> <span class="f">canActivate</span>(context: ExecutionContext): Promise&lt;<span class="k">boolean</span>&gt; {
+    <span class="k">const</span> request = context.<span class="f">switchToHttp</span>().<span class="f">getRequest</span>&lt;AuthenticatedRequest&gt;();
+    <span class="k">const</span> token = <span class="k">this</span>.<span class="f">extractToken</span>(request);
+
+    <span class="k">if</span> (!token) {
+      <span class="k">throw new</span> <span class="f">UnauthorizedException</span>({
+        code: <span class="s">'AUTH_TOKEN_MISSING'</span>,
+        message: <span class="s">'Thiếu access token'</span>,
+      });
+    }
+
+    <span class="k">try</span> {
+      <span class="c">// verifyAsync kiểm tra cả chữ ký lẫn thời hạn (exp).</span>
+      <span class="k">const</span> payload = <span class="k">await</span> <span class="k">this</span>.jwtService.<span class="f">verifyAsync</span>&lt;JwtPayload&gt;(token);
+      request.user = payload;
+      <span class="k">return true</span>;
+    } <span class="k">catch</span> {
+      <span class="k">throw new</span> <span class="f">UnauthorizedException</span>({
+        code: <span class="s">'AUTH_TOKEN_INVALID'</span>,
+        message: <span class="s">'Access token không hợp lệ hoặc đã hết hạn'</span>,
+      });
+    }
+  }
+
+  <span class="k">private</span> <span class="f">extractToken</span>(request: AuthenticatedRequest): <span class="k">string</span> | <span class="k">undefined</span> {
+    <span class="k">const</span> [type, token] = request.headers.authorization?.<span class="f">split</span>(<span class="s">' '</span>) ?? [];
+    <span class="k">return</span> type === <span class="s">'Bearer'</span> ? token : <span class="k">undefined</span>;
+  }
+}</pre>
+        </div>
+
+        <h3>CanActivate là gì?</h3>
+        <p>Là interface của Nest cho guard. Guard chạy <strong>trước</strong> controller để trả lời câu hỏi: “request này có được đi tiếp không?”.</p>
+        <ul>
+          <li><code>return true</code> → cho đi tiếp.</li>
+          <li><code>return false</code> → Nest trả 403.</li>
+          <li><code>throw UnauthorizedException</code> → Nest trả 401 với body mình chọn.</li>
+        </ul>
+
+        <div class="note">
+          <div class="head">Vì sao dùng throw thay vì return false?</div>
+          <p>Trả 401 kèm <code>{ code, message }</code> rõ ràng hơn 403 mặc định. Client biết chính xác thiếu token hay token sai.</p>
+        </div>
+
+        <h3>Vì sao không dùng passport?</h3>
+        <p>Passport phù hợp khi có nhiều chiến lược đăng nhập (Google, Facebook, API key...). Ở đây chỉ có một loại Bearer JWT, nên tự viết guard giúp ít dependency hơn và dễ hiểu luồng. Nếu sau này thêm OAuth, có thể chuyển sang <code>@nestjs/passport</code>.</p>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Decorator CurrentUser</h2>
+
+        <div class="code">
+          <div class="code-head"><span class="name">src/auth/current-user.decorator.ts</span><span class="lang">TypeScript</span></div>
+<pre><span class="k">export const</span> CurrentUser = <span class="f">createParamDecorator</span>(
+  (_data: <span class="k">unknown</span>, context: ExecutionContext): JwtPayload =&gt; {
+    <span class="k">const</span> request = context
+      .<span class="f">switchToHttp</span>()
+      .<span class="f">getRequest</span>&lt;{ user: JwtPayload }&gt;();
+
+    <span class="k">return</span> request.user;
+  },
+);</pre>
+        </div>
+
+        <p>Nếu không có decorator, controller phải viết <code>@Req() req</code> rồi <code>req.user.sub</code>. Decorator gom phần lặp đó lại, và che đi kiểu <code>Request</code> của Express.</p>
+
+        <div class="code">
+          <div class="code-head"><span class="name">src/users/users.controller.ts</span><span class="lang">TypeScript</span></div>
+<pre><span class="k">@Controller</span>(<span class="s">'api/users'</span>)
+<span class="k">export class</span> <span class="f">UsersController</span> {
+  <span class="f">constructor</span>(<span class="k">private readonly</span> usersService: UsersService) {}
+
+  <span class="k">@Get</span>(<span class="s">'me'</span>)
+  <span class="k">@UseGuards</span>(JwtAuthGuard)
+  <span class="f">getMe</span>(<span class="k">@CurrentUser</span>() user: JwtPayload): Promise&lt;UserProfile&gt; {
+    <span class="k">return</span> <span class="k">this</span>.usersService.<span class="f">getProfile</span>(user.sub);
+  }
+}</pre>
+        </div>
+
+        <div class="note green">
+          <div class="head">Thứ tự chạy</div>
+          <p><code>JwtAuthGuard</code> → <code>@CurrentUser()</code> → service. Nếu guard ném 401, controller không được gọi, nên <code>user</code> luôn tồn tại khi vào handler.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Service trả hồ sơ</h2>
+
+        <div class="code">
+          <div class="code-head"><span class="name">src/users/users.service.ts</span><span class="lang">TypeScript</span></div>
+<pre><span class="k">async</span> <span class="f">getProfile</span>(userId: <span class="k">string</span>): Promise&lt;UserProfile&gt; {
+  <span class="k">const</span> account = <span class="k">await</span> <span class="k">this</span>.prisma.account.<span class="f">findUnique</span>({
+    where: { userId },
+    select: {
+      userId: <span class="k">true</span>,
+      emailNormalized: <span class="k">true</span>,
+      role: <span class="k">true</span>,
+      status: <span class="k">true</span>,
+      emailVerified: <span class="k">true</span>,
+      createdAt: <span class="k">true</span>,
+    },
+  });
+
+  <span class="k">if</span> (!account) {
+    <span class="k">throw new</span> <span class="f">NotFoundException</span>({
+      code: <span class="s">'USER_NOT_FOUND'</span>,
+      message: <span class="s">'Không tìm thấy tài khoản'</span>,
+    });
+  }
+
+  <span class="k">return</span> {
+    userId: account.userId,
+    email: account.emailNormalized,
+    role: account.role,
+    status: account.status,
+    emailVerified: account.emailVerified,
+    createdAt: account.createdAt,
+  };
+}</pre>
+        </div>
+
+        <h3>Vì sao vẫn cần query DB?</h3>
+        <p>Token chỉ chứa <code>sub</code> và <code>role</code>, không chứa email, trạng thái hay ngày tạo. Muốn trả hồ sơ đầy đủ thì phải đọc DB. Đây cũng là chỗ kiểm tra tài khoản còn tồn tại hay không.</p>
+
+        <div class="note yellow">
+          <div class="head">Trường hợp token còn hạn nhưng user đã bị xóa</div>
+          <p>Guard vẫn cho qua vì chữ ký hợp lệ, nhưng service trả <code>404 USER_NOT_FOUND</code>. Nếu muốn chặn sớm, có thể kiểm tra user trong guard — đổi lại mỗi request tốn thêm một query.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Kết quả chạy thật</h2>
+
+        <h3>Có token hợp lệ — 200</h3>
+        <div class="code">
+          <div class="code-head"><span class="name">GET /api/users/me</span><span class="lang">JSON</span></div>
+<pre>{
+  <span class="s">"userId"</span>: <span class="s">"3d829d22-ccf2-45a7-b8f7-45af44f26b63"</span>,
+  <span class="s">"email"</span>: <span class="s">"alice@example.com"</span>,
+  <span class="s">"role"</span>: <span class="s">"USER"</span>,
+  <span class="s">"status"</span>: <span class="s">"ACTIVE"</span>,
+  <span class="s">"emailVerified"</span>: <span class="k">false</span>,
+  <span class="s">"createdAt"</span>: <span class="s">"2026-11-06T08:21:41.371Z"</span>
+}</pre>
+        </div>
+
+        <h3>Không gửi token — 401</h3>
+        <div class="code">
+          <div class="code-head"><span class="name">401 Unauthorized</span><span class="lang">JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"AUTH_TOKEN_MISSING"</span>,
+  <span class="s">"message"</span>: <span class="s">"Thiếu access token"</span>
+}</pre>
+        </div>
+
+        <h3>Token rác — 401</h3>
+        <div class="code">
+          <div class="code-head"><span class="name">401 Unauthorized</span><span class="lang">JSON</span></div>
+<pre>{
+  <span class="s">"code"</span>: <span class="s">"AUTH_TOKEN_INVALID"</span>,
+  <span class="s">"message"</span>: <span class="s">"Access token không hợp lệ hoặc đã hết hạn"</span>
+}</pre>
+        </div>
+
+        <h3>Test tự động</h3>
+        <div class="code">
+          <div class="code-head"><span class="name">npm test</span><span class="lang">output</span></div>
+<pre>Test Files  <span class="n">5</span> passed (5)
+Tests       <span class="n">13</span> passed (13)</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Vì sao export JwtModule?</h2>
+        <p><code>AuthModule</code> đã cấu hình <code>JwtModule</code> với <code>JWT_SECRET</code>. <code>UsersModule</code> cần <code>JwtService</code> cho guard, nhưng không nên cấu hình JWT lần hai — dễ lệch secret hoặc lặp code.</p>
+
+        <div class="code">
+          <div class="code-head"><span class="name">src/auth/auth.module.ts</span><span class="lang">TypeScript</span></div>
+<pre><span class="k">@Module</span>({
+  imports: [JwtModule.<span class="f">registerAsync</span>({ ... })],
+  controllers: [AuthController],
+  providers: [AuthService, JwtAuthGuard],
+  <span class="c">// Cho UsersModule dùng lại JwtService và guard</span>
+  exports: [JwtModule, JwtAuthGuard],
+})</pre>
+        </div>
+
+        <p><code>UsersModule</code> chỉ cần <code>imports: [AuthModule]</code>. Đây là cách Nest chia sẻ dependency giữa các module mà không tạo thêm instance.</p>
+      </section>
+
+      <section>
+        <h2><span class="hash">#</span> Câu hỏi có thể bị hỏi</h2>
+
+        <details>
+          <summary>Guard chạy trước hay sau ValidationPipe?</summary>
+          <p>Guard chạy trước pipe, interceptor và handler. Nếu token sai, request bị chặn ngay, không tốn công validate body hay query DB.</p>
+        </details>
+
+        <details>
+          <summary>Vì sao 401 mà không phải 403?</summary>
+          <p>401 = chưa xác thực (thiếu hoặc sai token). 403 = đã xác thực nhưng không có quyền. Ví dụ user thường gọi route ADMIN sẽ là 403.</p>
+        </details>
+
+        <details>
+          <summary>Token hợp lệ nhưng tài khoản bị khóa thì sao?</summary>
+          <p>Hiện guard chưa kiểm tra <code>status</code>, nên vẫn cho qua; service trả hồ sơ với <code>status</code> hiện tại. Muốn chặn ngay, thêm query kiểm tra <code>status === 'ACTIVE'</code> trong guard — đổi lại mỗi request tốn thêm một query.</p>
+        </details>
+
+        <details>
+          <summary>Tại sao không gửi token qua query string?</summary>
+          <p>Query string dễ bị ghi vào log, lịch sử trình duyệt và referer. Header <code>Authorization</code> không bị những vấn đề đó, và là chuẩn cho Bearer token.</p>
+        </details>
+
+        <details>
+          <summary>Token bị lộ thì sao?</summary>
+          <p>Kẻ tấn công dùng được đến khi token hết hạn (tối đa 1 giờ). Vì JWT stateless, muốn thu hồi ngay cần thêm blacklist hoặc đổi secret (làm mất hiệu lực toàn bộ token). Với MVP, hạn 1 giờ là mức giảm thiệt hại chấp nhận được.</p>
+        </details>
+
+        <details>
+          <summary>Vì sao response không có passwordHash?</summary>
+          <p>Nguyên tắc tối thiểu dữ liệu. Dù hash khó đảo ngược, client không cần nó. Không trả ra ngoài thì không có nguy cơ rò rỉ qua log, cache hay DevTools.</p>
+        </details>
+      </section>
+
+      <section>
+        <div class="next">
+          <h2><span class="hash">#</span> Bước tiếp theo</h2>
+          <p><strong><code>GET /api/trials/campaigns</code></strong> — route được bảo vệ đầu tiên dùng dữ liệu thật: trả campaign đang active (đã seed <code>PREMIUM_7_DAYS</code>).</p>
+          <p>Sau đó mới tới <code>POST /api/trials/claims</code>: idempotency, outbox, gọi S2 và áp auto policy. Chia nhỏ từng bước để test được sau mỗi lần.</p>
+        </div>
+      </section>
+
+      <div class="footer">
+        <span>S1 — Account &amp; Trial · Guard &amp; /me</span>
+        <span>Phong cách: Discord · Cập nhật 08/11/2026</span>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

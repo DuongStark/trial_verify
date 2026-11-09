@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gọi S2 &amp; lưu assessment — S1 Trials</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --soft: #f4f4f4;
+    --soft-2: #e8e8e8;
+    --ink: #161616;
+    --muted: #525252;
+    --faint: #6f6f6f;
+    --line: #e0e0e0;
+    --blue: #0f62fe;
+    --blue-dark: #0043ce;
+    --blue-soft: #edf5ff;
+    --green: #198038;
+    --green-soft: #defbe6;
+    --red: #da1e28;
+    --red-soft: #fff1f1;
+    --yellow: #8e6a00;
+    --yellow-soft: #fcf4d6;
+    --max: 1060px;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 0 24px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .brand-mark {
+    background: var(--blue);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 5px 9px;
+  }
+
+  .breadcrumb { color: var(--faint); display: flex; gap: 8px; }
+  .breadcrumb strong { color: var(--ink); font-weight: 600; }
+
+  .nav-meta { color: var(--faint); font-size: 12px; }
+
+  .hero {
+    background: var(--soft);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 64px 24px 58px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--blue-dark);
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    max-width: 820px;
+    font-size: clamp(2.1rem, 5.2vw, 3.6rem);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+  }
+
+  .hero p {
+    margin: 0 0 22px;
+    max-width: 680px;
+    color: var(--muted);
+    font-size: clamp(1rem, 1.7vw, 1.16rem);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); width: fit-content; }
+  .chip { background: #fff; padding: 6px 12px; font-size: 12px; color: var(--muted); }
+  .chip strong { color: var(--ink); font-weight: 600; }
+  .chip.blue { color: var(--blue-dark); }
+  .chip.green { color: var(--green); }
+
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px 90px; }
+
+  section { padding: 44px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  .section-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: clamp(1.4rem, 2.8vw, 2rem);
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  .sub { margin: 0 0 24px; color: var(--muted); max-width: 760px; }
+
+  h3 { margin: 28px 0 10px; font-size: 1.08rem; font-weight: 600; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin: 6px 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.84em;
+    background: var(--soft);
+    border: 1px solid var(--line);
+    padding: 1px 5px;
+    color: var(--ink);
+  }
+
+  /* Architecture diagram */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 18px;
+    align-items: center;
+    margin: 24px 0;
+  }
+
+  .arch-box {
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--blue);
+    padding: 20px;
+    background: #fff;
+  }
+
+  .arch-box strong { display: block; margin-bottom: 4px; font-size: 0.98rem; }
+  .arch-box span { color: var(--muted); font-size: 0.86rem; }
+  .arch-arrow { text-align: center; color: var(--blue); font-size: 24px; line-height: 1.2; }
+  .arch-arrow small { display: block; font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+  /* Tiles */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin: 20px 0;
+  }
+
+  .tile { background: #fff; padding: 20px; }
+  .tile .num { font-size: 12px; color: var(--blue); font-weight: 600; margin-bottom: 10px; }
+  .tile strong { display: block; margin-bottom: 4px; }
+  .tile p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+
+  /* Notes */
+  .note {
+    background: var(--blue-soft);
+    border-left: 3px solid var(--blue);
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 0.95rem;
+  }
+
+  .note .head { font-weight: 600; color: var(--blue-dark); margin-bottom: 4px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note.green { background: var(--green-soft); border-color: var(--green); }
+  .note.green .head { color: var(--green); }
+  .note.yellow { background: var(--yellow-soft); border-color: #d2a106; }
+  .note.yellow .head { color: var(--yellow); }
+  .note.red { background: var(--red-soft); border-color: var(--red); }
+  .note.red .head { color: var(--red); }
+
+  /* Code */
+  .code {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--blue);
+    margin: 14px 0 22px;
+    overflow: hidden;
+  }
+
+  .code-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  .code-head .name { color: var(--ink); }
+
+  .code pre {
+    margin: 0;
+    padding: 16px 18px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: var(--mono);
+    font-size: 0.81rem;
+    line-height: 1.68;
+    tab-size: 2;
+    color: var(--ink);
+  }
+
+  .c { color: #6f6f6f; }
+  .k { color: #0043ce; }
+  .s { color: #198038; }
+  .f { color: #8a3ffc; }
+  .n { color: #b28600; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--blue-soft); }
+
+  /* Q&A */
+  details {
+    border: 1px solid var(--line);
+    padding: 14px 18px;
+    margin: 8px 0;
+    background: #fff;
+  }
+
+  summary { cursor: pointer; font-weight: 600; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "+"; color: var(--blue); margin-right: 10px; font-weight: 600; }
+  details[open] summary::before { content: "−"; }
+  details p { margin: 10px 0 0; color: var(--muted); font-size: 0.94rem; }
+
+  .next {
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--blue);
+    padding: 26px 28px;
+    margin-top: 18px;
+    background: var(--soft);
+  }
+
+  .next h2 { font-size: 1.25rem; margin-bottom: 10px; }
+  .next p { color: var(--muted); margin-bottom: 8px; }
+  .next p:last-child { margin-bottom: 0; }
+
+  .footer {
+    padding-top: 30px;
+    color: var(--faint);
+    font-size: 0.82rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 720px) {
+    .hero-inner { padding: 46px 18px 40px; }
+    .wrap { padding: 0 18px 60px; }
+    .arch { grid-template-columns: 1fr; }
+    .arch-arrow { transform: rotate(90deg); }
+    .breadcrumb { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-inner">
+    <div class="brand">
+      <span class="brand-mark">S1</span>
+      <div class="breadcrumb">
+        <span>Trials</span><span>/</span><strong>Risk assessment</strong>
+      </div>
+    </div>
+    <div class="nav-meta">Bước 3b · 08/11/2026</div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Tích hợp S1 → S2</div>
+    <h1>Gọi S2 và lưu assessment.</h1>
+    <p>Sau khi claim được tạo, S1 gọi S2 để chấm điểm. Kết quả được lưu vào claim, nhưng trạng thái vẫn giữ <code>PENDING_RISK_CHECK</code> — bước 3c mới áp policy.</p>
+    <div class="chips">
+      <span class="chip blue"><strong>202</strong> Accepted</span>
+      <span class="chip"><strong>POST</strong> /internal/risk/assessments</span>
+      <span class="chip green">26 + 8 tests pass</span>
+      <span class="chip">stub S2</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <div class="section-label">Kiến trúc</div>
+    <h2>Ai gọi ai?</h2>
+    <p class="sub">S1 sở hữu claim. S2 sở hữu đánh giá rủi ro. Hai service nói chuyện qua internal API, không đi qua gateway.</p>
+
+    <div class="arch">
+      <div class="arch-box">
+        <strong>S1 — Account &amp; Trial</strong>
+        <span>TrialsService tạo claim, gọi RiskClient</span>
+      </div>
+      <div class="arch-arrow">
+        →
+        <small>internal token</small>
+      </div>
+      <div class="arch-box">
+        <strong>S2 — Graph &amp; Risk</strong>
+        <span>RiskService trả assessment</span>
+      </div>
+    </div>
+
+    <div class="note">
+      <div class="head">Vì sao không đi qua gateway?</div>
+      <p>Route <code>/internal/</code> là giao tiếp nội bộ, không dành cho client. NGINX chặn mọi request <code>/internal/</code> từ bên ngoài. S1 gọi thẳng <code>http://graph-risk:3002</code> trong mạng Docker.</p>
+    </div>
+
+    <h3>Hai lớp bảo vệ khác nhau</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Loại token</th><th>Dùng cho</th><th>Ai kiểm tra</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>JWT (Bearer)</td>
+            <td>Người dùng gọi API public</td>
+            <td><code>JwtAuthGuard</code> ở S1</td>
+          </tr>
+          <tr>
+            <td><code>X-Internal-Token</code></td>
+            <td>Service gọi service</td>
+            <td><code>InternalTokenGuard</code> ở S2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Quyết định kiến trúc</div>
+    <h2>Vì sao gọi HTTP mà không dùng RabbitMQ?</h2>
+    <p class="sub">Vì claim flow cần câu trả lời <strong>ngay trong request</strong> để biết claim đang chờ, được duyệt hay bị từ chối.</p>
+
+    <div class="arch">
+      <div class="arch-box">
+        <strong>HTTP đồng bộ</strong>
+        <span>S1 hỏi → S2 trả lời ngay → S1 tiếp tục xử lý</span>
+      </div>
+      <div class="arch-arrow">⇄</div>
+      <div class="arch-box">
+        <strong>RabbitMQ bất đồng bộ</strong>
+        <span>S1 gửi event → không chờ → consumer xử lý sau</span>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tiêu chí</th><th>HTTP đồng bộ</th><th>RabbitMQ bất đồng bộ</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Có kết quả ngay?</td>
+            <td>Có, trong cùng request</td>
+            <td>Không, phải chờ consumer và nhận kết quả qua message khác</td>
+          </tr>
+          <tr>
+            <td>Độ phức tạp</td>
+            <td>Thấp: gọi, đọc response, xử lý lỗi</td>
+            <td>Cao: correlationId, queue kết quả, retry, DLQ</td>
+          </tr>
+          <tr>
+            <td>Coupling</td>
+            <td>S1 cần S2 đang sống tại thời điểm gọi</td>
+            <td>S1 không cần S2 sống, message nằm trong queue</td>
+          </tr>
+          <tr>
+            <td>Độ trễ</td>
+            <td>Thấp (vài chục ms nội bộ)</td>
+            <td>Cao hơn, phụ thuộc consumer</td>
+          </tr>
+          <tr>
+            <td>Phù hợp</td>
+            <td>Quyết định real-time, cần phản hồi ngay</td>
+            <td>Event, audit, fan-out, xử lý nền</td>
+          </tr>
+          <tr>
+            <td>Trong dự án</td>
+            <td>S1 gọi S2 chấm điểm</td>
+            <td>Outbox → S3, cập nhật graph, audit</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Nếu dùng RabbitMQ cho S1 → S2 thì sao?</h3>
+    <ol>
+      <li>S1 publish message “hãy chấm claim này”. Không có kết quả ngay.</li>
+      <li>S2 consume, chấm điểm, rồi publish kết quả vào một queue khác.</li>
+      <li>S1 phải consume queue kết quả, dùng <code>correlationId</code> để biết kết quả thuộc claim nào.</li>
+      <li>Client muốn biết kết quả phải <strong>poll</strong> <code>GET /claims/{id}</code>.</li>
+    </ol>
+    <p>Luồng này hợp lý khi chấp nhận xử lý nền, nhưng với claim trial ta muốn biết ngay để trả 201/202 và áp policy. Dùng HTTP đơn giản hơn nhiều.</p>
+
+    <h3>Vậy RabbitMQ dùng ở đâu?</h3>
+    <p>Thiết kế v4 chốt: <strong>REST/HTTP cho giao tiếp đồng bộ, RabbitMQ cho event bất đồng bộ</strong>. RabbitMQ nằm sau outbox:</p>
+
+    <div class="code">
+      <div class="code-head"><span class="name">Luồng event</span><span>text</span></div>
+<pre>S1 tạo claim ──► s1_outbox (cùng transaction)
+                    │
+                    ▼
+              Outbox publisher (worker)
+                    │
+                    ▼
+                 RabbitMQ
+                /        \
+               ▼          ▼
+        S3 tạo case   S2 cập nhật graph/audit</pre>
+    </div>
+
+    <div class="note">
+      <div class="head">Điểm mấu chốt</div>
+      <p>Quyết định “cho hay không cho trial” cần đồng bộ. Việc “ghi audit, tạo case, cập nhật graph” không cần chặn response, nên đẩy qua RabbitMQ. Hai loại giao tiếp giải hai bài toán khác nhau, không thay thế nhau.</p>
+    </div>
+
+    <div class="note yellow">
+      <div class="head">Nếu S2 chết thì sao?</div>
+      <p>HTTP sẽ lỗi/timeout. S1 không làm sập cả request: claim đã lưu, giữ <code>PENDING_RISK_CHECK</code>, ghi <code>lastError</code> và hẹn retry. Đây là cách giữ tính đúng đắn dù giao tiếp đồng bộ. Worker retry sẽ thử lại sau.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Hợp đồng API</div>
+    <h2>S1 gửi gì, S2 trả gì?</h2>
+
+    <h3>Request</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">POST /internal/risk/assessments</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"claimId"</span>: <span class="s">"0ba5fb20-8b15-495f-9d20-1f98982d5865"</span>,
+  <span class="s">"userId"</span>: <span class="s">"8f1c...a2"</span>,
+  <span class="s">"campaignId"</span>: <span class="s">"PREMIUM_7_DAYS"</span>,
+  <span class="s">"evaluationVersion"</span>: <span class="n">1</span>
+}</pre>
+    </div>
+
+    <h3>Response</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">201 Created</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"assessmentId"</span>: <span class="s">"5065ea29...f1fe4"</span>,
+  <span class="s">"assessmentKey"</span>: <span class="s">"0ba5fb20...:1"</span>,
+  <span class="s">"claimId"</span>: <span class="s">"0ba5fb20-..."</span>,
+  <span class="s">"evaluationVersion"</span>: <span class="n">1</span>,
+  <span class="s">"score"</span>: <span class="n">0</span>,
+  <span class="s">"level"</span>: <span class="s">"LOW"</span>,
+  <span class="s">"decision"</span>: <span class="s">"ALLOW"</span>,
+  <span class="s">"groupScores"</span>: { <span class="s">"D"</span>: <span class="n">0</span>, <span class="s">"N"</span>: <span class="n">0</span>, <span class="s">"I"</span>: <span class="n">0</span>, <span class="s">"V"</span>: <span class="n">0</span> },
+  <span class="s">"reasons"</span>: [],
+  <span class="s">"ruleVersion"</span>: <span class="s">"stub-v1"</span>,
+  <span class="s">"evaluatedAt"</span>: <span class="s">"2026-11-08T08:40:47.293Z"</span>
+}</pre>
+    </div>
+
+    <div class="note yellow">
+      <div class="head">Đây là stub cho M2</div>
+      <p>S2 hiện luôn trả <code>ALLOW / LOW / 0</code> để nối được luồng. Chưa dùng Neo4j, chưa có tín hiệu D/N/I/V. M3 sẽ thay bằng chấm điểm thật. Nhờ vậy S1 có thể hoàn thiện claim flow trước.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Bản đồ code</div>
+    <h2>Toàn bộ file liên quan</h2>
+    <p class="sub">Bước 3b chạm cả hai service. Dưới đây là mọi file cần đọc để hiểu trọn luồng, kể cả file không sửa nhưng có vai trò trong đường đi của request.</p>
+
+    <h3>Phía S1 — Account &amp; Trial</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Loại</th><th>Vai trò</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/trials/trials.controller.ts</code></td>
+            <td>Đã có từ 3a</td>
+            <td>Nhận <code>POST /api/trials/claims</code>, lấy userId từ JWT và <code>Idempotency-Key</code> từ header.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/dto/create-claim.dto.ts</code></td>
+            <td>Đã có từ 3a</td>
+            <td>Validate <code>campaignId</code> trước khi vào service.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.service.ts</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Trung tâm của bước này: tạo claim, gọi <code>assessClaim()</code>, lưu assessment, xử lý lỗi S2.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/risk-client.service.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>HTTP client gọi S2: URL, internal token, timeout 2 giây, kiểm tra status.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.module.ts</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Đăng ký <code>RiskClient</code> để Nest inject vào service.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/trials.service.spec.ts</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Test tạo claim + assessment, S2 lỗi, replay, xung đột.</td>
+          </tr>
+          <tr>
+            <td><code>src/trials/risk-client.service.spec.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Test URL/token/body, S2 trả 503, thiếu token.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/jwt-auth.guard.ts</code></td>
+            <td>Không sửa</td>
+            <td>Bảo vệ route claim, gắn <code>request.user</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/auth/current-user.decorator.ts</code></td>
+            <td>Không sửa</td>
+            <td>Lấy userId trong controller.</td>
+          </tr>
+          <tr>
+            <td><code>prisma/schema.prisma</code></td>
+            <td>Không sửa</td>
+            <td>Định nghĩa các cột <code>assessment_id</code>, <code>risk_score</code>, <code>risk_level</code>, <code>decision</code>, <code>last_error</code>, <code>retry_count</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Phía S2 — Graph &amp; Risk</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Loại</th><th>Vai trò</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>src/risk/risk.controller.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Nhận <code>POST /internal/risk/assessments</code>, trả 201.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/dto/create-assessment.dto.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Validate <code>claimId</code>, <code>userId</code>, <code>campaignId</code>, <code>evaluationVersion</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/internal-token.guard.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>So khớp <code>X-Internal-Token</code> với env; sai/thiếu → 401.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/risk.service.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Stub chấm điểm: luôn ALLOW/LOW/0; tạo <code>assessmentId</code> ổn định từ <code>claimId:version</code>.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/risk.module.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Gom controller, service, guard.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/risk.service.spec.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Test decision, assessmentId ổn định, version khác → ID khác.</td>
+          </tr>
+          <tr>
+            <td><code>src/risk/internal-token.guard.spec.ts</code></td>
+            <td>Mới ở 3b</td>
+            <td>Test thiếu token, sai token, đúng token.</td>
+          </tr>
+          <tr>
+            <td><code>src/main.ts</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Bật <code>ValidationPipe</code> toàn cục cho S2.</td>
+          </tr>
+          <tr>
+            <td><code>src/app.module.ts</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Import <code>RiskModule</code>.</td>
+          </tr>
+          <tr>
+            <td><code>package.json</code></td>
+            <td>Sửa ở 3b</td>
+            <td>Thêm <code>class-validator</code>, <code>class-transformer</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>File cấu hình liên quan</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>File</th><th>Vai trò</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>docker-compose.yml</code></td>
+            <td>Cho S1 và S2 chung network; <code>graph-risk</code> là hostname S1 dùng để gọi S2.</td>
+          </tr>
+          <tr>
+            <td><code>.env</code> / <code>.env.example</code></td>
+            <td><code>RISK_SERVICE_URL</code>, <code>INTERNAL_SERVICE_TOKEN</code>, <code>RISK_HTTP_TIMEOUT_MS</code>.</td>
+          </tr>
+          <tr>
+            <td><code>infra/nginx/nginx.conf</code></td>
+            <td>Chặn <code>/internal/</code> từ bên ngoài, chỉ cho gọi nội bộ.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Cây file</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">Cấu trúc</span><span>text</span></div>
+<pre>apps/
+├── account-trial-service/src/trials/
+│   ├── trials.controller.ts        ← route POST /claims
+│   ├── trials.service.ts           ← createClaim + assessClaim
+│   ├── risk-client.service.ts      ← gọi S2
+│   ├── trials.module.ts            ← wiring
+│   ├── dto/create-claim.dto.ts     ← input
+│   ├── trials.service.spec.ts
+│   └── risk-client.service.spec.ts
+│
+└── graph-risk-service/src/risk/
+    ├── risk.controller.ts          ← POST /internal/risk/assessments
+    ├── risk.service.ts             ← stub chấm điểm
+    ├── internal-token.guard.ts     ← chặn service lạ
+    ├── risk.module.ts
+    ├── dto/create-assessment.dto.ts
+    ├── risk.service.spec.ts
+    └── internal-token.guard.spec.ts</pre>
+    </div>
+
+    <h3>Thứ tự đọc để hiểu nhanh</h3>
+    <ol>
+      <li><code>trials.controller.ts</code> — request vào ở đâu.</li>
+      <li><code>trials.service.ts</code> → <code>createClaim()</code> — tạo claim và outbox.</li>
+      <li><code>trials.service.ts</code> → <code>assessClaim()</code> — gọi S2 và lưu kết quả.</li>
+      <li><code>risk-client.service.ts</code> — HTTP đi như thế nào.</li>
+      <li><code>risk.controller.ts</code> — S2 nhận request.</li>
+      <li><code>internal-token.guard.ts</code> — kiểm tra token nội bộ.</li>
+      <li><code>risk.service.ts</code> — S2 tạo assessment.</li>
+      <li>Hai file spec — xem các trường hợp lỗi được test.</li>
+    </ol>
+
+    <div class="note">
+      <div class="head">Đọc kèm file nào?</div>
+      <p><code>s1-trials-claim.html</code> giải thích transaction và idempotency (3a). File này giải thích phần gọi S2 (3b). Đọc 3a trước sẽ dễ hiểu 3b hơn.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Phía S1</div>
+    <h2>RiskClient: gọi HTTP có timeout</h2>
+
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/risk-client.service.ts</span><span>TypeScript</span></div>
+<pre><span class="k">async</span> <span class="f">assess</span>(input: RiskAssessmentInput): Promise&lt;RiskAssessmentResponse&gt; {
+  <span class="k">const</span> baseUrl = process.env.RISK_SERVICE_URL ?? <span class="s">'http://graph-risk:3002'</span>;
+  <span class="k">const</span> token = process.env.INTERNAL_SERVICE_TOKEN;
+  <span class="k">const</span> timeoutMs = Number(process.env.RISK_HTTP_TIMEOUT_MS ?? <span class="n">2000</span>);
+
+  <span class="k">if</span> (!token) {
+    <span class="k">throw new</span> Error(<span class="s">'INTERNAL_SERVICE_TOKEN chưa được cấu hình'</span>);
+  }
+
+  <span class="k">const</span> response = <span class="k">await</span> <span class="f">fetch</span>(
+    <span class="s">`${baseUrl}/internal/risk/assessments`</span>,
+    {
+      method: <span class="s">'POST'</span>,
+      headers: {
+        <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span>,
+        <span class="s">'X-Internal-Token'</span>: token,
+      },
+      body: JSON.stringify(input),
+      signal: AbortSignal.<span class="f">timeout</span>(timeoutMs),
+    },
+  );
+
+  <span class="k">if</span> (!response.ok) {
+    <span class="k">throw new</span> Error(<span class="s">`S2 trả HTTP ${response.status}`</span>);
+  }
+
+  <span class="k">return</span> (<span class="k">await</span> response.<span class="f">json</span>()) <span class="k">as</span> RiskAssessmentResponse;
+}</pre>
+    </div>
+
+    <h3>Vì sao dùng <code>fetch</code> thay vì axios?</h3>
+    <p>Node 24 có <code>fetch</code> sẵn. Không cần thêm dependency, không cần cấu hình module. <code>AbortSignal.timeout(2000)</code> đảm bảo S1 không treo nếu S2 chậm — sau 2 giây request bị huỷ.</p>
+
+    <h3>Lưu assessment vào claim</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">src/trials/trials.service.ts</span><span>TypeScript</span></div>
+<pre><span class="k">private async</span> <span class="f">assessClaim</span>(claim: ClaimView, userId: <span class="k">string</span>) {
+  <span class="c">// Retry sau khi S2 đã thành công → không gọi lại.</span>
+  <span class="k">if</span> (claim.assessmentId) {
+    <span class="k">return</span> claim;
+  }
+
+  <span class="k">try</span> {
+    <span class="k">const</span> assessment = <span class="k">await</span> <span class="k">this</span>.riskClient.<span class="f">assess</span>({
+      claimId: claim.claimId,
+      userId,
+      campaignId: claim.campaignId,
+      evaluationVersion: claim.evaluationVersion,
+    });
+
+    <span class="c">// Bước 3b chỉ lưu kết quả; chưa đổi status.</span>
+    <span class="k">return await</span> <span class="k">this</span>.prisma.trialClaim.<span class="f">update</span>({
+      where: { claimId: claim.claimId },
+      data: {
+        assessmentId: assessment.assessmentId,
+        riskScore: assessment.score,
+        riskLevel: assessment.level,
+        decision: assessment.decision,
+        reasonsJson: assessment.reasons,
+      },
+      select: CLAIM_SELECT,
+    });
+  } <span class="k">catch</span> (error) {
+    <span class="c">// S2 lỗi: giữ PENDING để retry sau.</span>
+    <span class="k">await</span> <span class="k">this</span>.prisma.trialClaim.<span class="f">update</span>({
+      where: { claimId: claim.claimId },
+      data: {
+        lastError: error <span class="k">instanceof</span> Error ? error.message : <span class="s">'S2 không phản hồi'</span>,
+        retryCount: { increment: <span class="n">1</span> },
+        nextRetryAt: <span class="k">new</span> Date(Date.now() + <span class="n">30_000</span>),
+      },
+    }).<span class="f">catch</span>(() =&gt; <span class="k">undefined</span>);
+
+    <span class="k">return</span> claim;
+  }
+}</pre>
+    </div>
+
+    <div class="note green">
+      <div class="head">Vì sao không trả lỗi 500 khi S2 chết?</div>
+      <p>Claim đã được tạo và lưu. Nếu trả 500, client tưởng chưa có claim và có thể thử campaign khác. Giữ 202 + <code>PENDING_RISK_CHECK</code> phản ánh đúng: yêu cầu đã nhận, đang chờ xử lý. Worker retry (sau này) sẽ gọi lại S2.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Phía S2</div>
+    <h2>Endpoint tối thiểu</h2>
+
+    <div class="code">
+      <div class="code-head"><span class="name">src/risk/risk.service.ts</span><span>TypeScript</span></div>
+<pre><span class="f">assess</span>(dto: CreateAssessmentDto): AssessmentResult {
+  <span class="k">const</span> assessmentKey = <span class="s">`${dto.claimId}:${dto.evaluationVersion}`</span>;
+
+  <span class="c">// Cùng claim + cùng version → cùng assessmentId.</span>
+  <span class="k">const</span> assessmentId = <span class="f">createHash</span>(<span class="s">'sha256'</span>)
+    .<span class="f">update</span>(assessmentKey)
+    .<span class="f">digest</span>(<span class="s">'hex'</span>);
+
+  <span class="k">return</span> {
+    assessmentId,
+    assessmentKey,
+    claimId: dto.claimId,
+    userId: dto.userId,
+    campaignId: dto.campaignId,
+    evaluationVersion: dto.evaluationVersion,
+    score: <span class="n">0</span>,
+    level: <span class="s">'LOW'</span>,
+    decision: <span class="s">'ALLOW'</span>,
+    groupScores: { D: <span class="n">0</span>, N: <span class="n">0</span>, I: <span class="n">0</span>, V: <span class="n">0</span> },
+    reasons: [],
+    ruleVersion: <span class="s">'stub-v1'</span>,
+    evaluatedAt: <span class="k">new</span> Date().<span class="f">toISOString</span>(),
+  };
+}</pre>
+    </div>
+
+    <h3>Internal token guard</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">src/risk/internal-token.guard.ts</span><span>TypeScript</span></div>
+<pre><span class="f">canActivate</span>(context: ExecutionContext): <span class="k">boolean</span> {
+  <span class="k">const</span> request = context.<span class="f">switchToHttp</span>().<span class="f">getRequest</span>&lt;Request&gt;();
+  <span class="k">const</span> token = request.headers[<span class="s">'x-internal-token'</span>];
+  <span class="k">const</span> expected = process.env.INTERNAL_SERVICE_TOKEN;
+
+  <span class="k">if</span> (!expected || token !== expected) {
+    <span class="k">throw new</span> UnauthorizedException({
+      code: <span class="s">'INVALID_INTERNAL_TOKEN'</span>,
+      message: <span class="s">'Internal token không hợp lệ'</span>,
+    });
+  }
+
+  <span class="k">return true</span>;
+}</pre>
+    </div>
+
+    <p>Token sai hoặc thiếu đều trả <code>401</code>. Gateway bên ngoài đã chặn <code>/internal/</code>, nên đây là lớp bảo vệ thứ hai.</p>
+  </section>
+
+  <section>
+    <div class="section-label">Kết quả</div>
+    <h2>Chạy thật với claim mới</h2>
+
+    <div class="code">
+      <div class="code-head"><span class="name">202 Accepted</span><span>JSON</span></div>
+<pre>{
+  <span class="s">"claimId"</span>: <span class="s">"0ba5fb20-8b15-495f-9d20-1f98982d5865"</span>,
+  <span class="s">"campaignId"</span>: <span class="s">"PREMIUM_7_DAYS"</span>,
+  <span class="s">"status"</span>: <span class="s">"PENDING_RISK_CHECK"</span>,
+  <span class="s">"evaluationVersion"</span>: <span class="n">1</span>,
+  <span class="s">"assessmentId"</span>: <span class="s">"5065ea29...c7f1fe4"</span>,
+  <span class="s">"riskScore"</span>: <span class="n">0</span>,
+  <span class="s">"riskLevel"</span>: <span class="s">"LOW"</span>,
+  <span class="s">"decision"</span>: <span class="s">"ALLOW"</span>
+}</pre>
+    </div>
+
+    <h3>Trong database</h3>
+    <div class="code">
+      <div class="code-head"><span class="name">trial_claims</span><span>SQL</span></div>
+<pre>claim_id            = 0ba5fb20-8b15-495f-9d20-1f98982d5865
+status              = PENDING_RISK_CHECK
+assessment_id       = 5065ea29...c7f1fe4
+risk_score          = 0
+risk_level          = LOW
+decision            = ALLOW
+retry_count         = 0</pre>
+    </div>
+
+    <div class="note">
+      <div class="head">Decision đã có nhưng status chưa đổi</div>
+      <p>Đây là chủ ý của bước 3b. Claim vẫn <code>PENDING_RISK_CHECK</code> dù S2 trả ALLOW. Bước 3c mới chuyển sang <code>ACTIVE</code> và phát outbox <code>trial.activated.v1</code>.</p>
+    </div>
+
+    <h3>Test</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>File test</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td>S1</td><td>7 file</td><td><strong>26 test pass</strong></td></tr>
+          <tr><td>S2</td><td>4 file</td><td><strong>8 test pass</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Xử lý lỗi</div>
+    <h2>Khi S2 không trả lời</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tình huống</th><th>S1 làm gì</th><th>Client thấy</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>S2 timeout (2s)</td>
+            <td>Ghi <code>lastError</code>, tăng <code>retryCount</code>, đặt <code>nextRetryAt</code></td>
+            <td>202, claim PENDING</td>
+          </tr>
+          <tr>
+            <td>S2 trả 5xx</td>
+            <td>Giống timeout</td>
+            <td>202, claim PENDING</td>
+          </tr>
+          <tr>
+            <td>Sai internal token</td>
+            <td>Ghi lỗi, giữ PENDING</td>
+            <td>202, claim PENDING</td>
+          </tr>
+          <tr>
+            <td>S2 trả 201</td>
+            <td>Lưu assessment vào claim</td>
+            <td>202, có assessmentId</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note red">
+      <div class="head">Chưa có worker retry</div>
+      <p>Claim PENDING sau lỗi sẽ nằm chờ. Schema đã có <code>nextRetryAt</code>, <code>retryCount</code>, <code>maxAttempts</code>. Worker quét claim PENDING và gọi lại S2 sẽ làm ở bước sau.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-label">Hỏi đáp</div>
+    <h2>Câu hỏi có thể bị hỏi</h2>
+
+    <details>
+      <summary>Vì sao S2 trả ALLOW mà claim chưa ACTIVE?</summary>
+      <p>Vì bước 3b chỉ lưu kết quả. Việc áp policy (ALLOW → ACTIVE, VERIFY → VERIFY_REQUIRED, REJECT → REJECTED) là bước 3c. Tách như vậy để test từng phần: gọi S2 đúng trước, rồi mới xử lý trạng thái.</p>
+    </details>
+
+    <details>
+      <summary>assessmentId được tạo thế nào?</summary>
+      <p><code>SHA256(claimId:evaluationVersion)</code>. Cùng claim và cùng version luôn cho cùng ID, nên S2 idempotent mà chưa cần database. Khi S2 có Neo4j, ID này có thể dùng làm khóa duy nhất.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao S1 không gửi fingerprint sang S2 ở bước này?</summary>
+      <p>Vì S1 chưa thu thập fingerprint/IP. Hợp đồng API đã có chỗ để mở rộng; khi làm S2 thật sẽ thêm trường tín hiệu. Hiện tại chỉ cần đủ để nối luồng.</p>
+    </details>
+
+    <details>
+      <summary>Nếu S2 trả decision lạ thì sao?</summary>
+      <p>Bước 3c sẽ validate decision thuộc <code>ALLOW | VERIFY | REJECT</code>. Nếu lạ, coi như lỗi và giữ PENDING, không tự suy diễn.</p>
+    </details>
+
+    <details>
+      <summary>Vì sao dùng internal token thay vì JWT?</summary>
+      <p>JWT đại diện cho người dùng. Gọi service-to-service không có người dùng cụ thể, nên dùng token tĩnh chia sẻ giữa service. Đơn giản hơn và không cần phát token cho máy.</p>
+    </details>
+
+    <details>
+      <summary>Có cần gọi S2 lại khi client retry không?</summary>
+      <p>Nếu claim đã có <code>assessmentId</code>, không gọi lại. Nếu lần trước S2 lỗi (assessmentId null), retry sẽ gọi lại. Điều này tránh đánh giá trùng và vẫn phục hồi được sau lỗi.</p>
+    </details>
+  </section>
+
+  <section>
+    <div class="next">
+      <div class="section-label">Tiếp theo</div>
+      <h2>Bước 3c — Áp auto policy</h2>
+      <p><strong>ALLOW</strong> → <code>ACTIVE</code>, đặt <code>activatedAt</code>, <code>expiresAt</code>, phát outbox <code>trial.activated.v1</code>.</p>
+      <p><strong>VERIFY</strong> → <code>VERIFY_REQUIRED</code>, tạo OTP (TTL 10 phút), outbox audit.</p>
+      <p><strong>REJECT</strong> → <code>REJECTED</code>, phát outbox <code>trial.rejected.v1</code>.</p>
+      <p>Kèm kiểm tra <code>evaluationVersion</code> và <code>version</code> để bỏ qua kết quả cũ.</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    <span>S1 — Account &amp; Trial · Tích hợp S2</span>
+    <span>Phong cách: IBM Carbon · Cập nhật 08/11/2026</span>
+  </div>
+
+</div>
+</body>
+</html>
